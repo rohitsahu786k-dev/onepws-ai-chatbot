@@ -5,5 +5,11 @@
     "rootDir": "../../",
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*", "../../packages/**/*"]
+  "include": [
+    "src/**/*",
+    "../../packages/config/src/**/*",
+    "../../packages/core/src/**/*",
+    "../../packages/types/src/**/*",
+    "../../packages/utils/src/**/*"
+  ]
 }

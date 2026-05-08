@@ -5,6 +5,7 @@ coverage
 .env
 .env.local
 .env.production
+api.chat.onepws.com.env
 .turbo
 *.log
 npm-debug.log*

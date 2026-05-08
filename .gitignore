@@ -4,6 +4,7 @@ dist
 coverage
 .env
 .env.local
+.env.production
 .turbo
 *.log
 npm-debug.log*

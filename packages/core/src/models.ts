@@ -44,7 +44,7 @@ const AdminUserSchema = new Schema(
   {
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true, index: true },
+    email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     roles: { type: [String], enum: adminRoles, default: ["viewer"] },
     departmentSlug: String,

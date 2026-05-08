@@ -20,8 +20,8 @@ import {
   findExistingLeadByIdentity,
   getAnalyticsOverview,
   getSessionLead,
-  hashPassword,
   hasRole,
+  ensureDefaultAdminUsers,
   initSession,
   parseAuthHeader,
   persistMessage,
@@ -140,38 +140,9 @@ async function recordAudit(
   });
 }
 
-async function ensureDefaultAdminUser() {
-  const count = await AdminUserModel.estimatedDocumentCount();
-  if (count > 0) return;
-
-  const [superPassword, marketingPassword] = await Promise.all([
-    hashPassword("OnepwsAdmin@123"),
-    hashPassword("OnepwsMarketing@123"),
-  ]);
-
-  await AdminUserModel.insertMany([
-    {
-      firstName: "System",
-      lastName: "Admin",
-      email: "admin@onepws.com",
-      passwordHash: superPassword,
-      roles: ["super_admin"],
-      isActive: true,
-    },
-    {
-      firstName: "Marketing",
-      lastName: "User",
-      email: "marketing@onepws.com",
-      passwordHash: marketingPassword,
-      roles: ["marketing"],
-      isActive: true,
-    },
-  ]);
-}
-
 async function login(request: NextRequest) {
   const payload = loginSchema.parse(await bodyJson(request));
-  await ensureDefaultAdminUser();
+  await ensureDefaultAdminUsers();
 
   const user = await AdminUserModel.findOne({ email: payload.email, isActive: true });
   if (!user) return json({ message: "Invalid credentials" }, { status: 401 });

@@ -30,6 +30,7 @@ import {
   getAnalyticsOverview,
   getSessionLead,
   hasRole,
+  ensureDefaultAdminUsers,
   initSession,
   parseAuthHeader,
   persistMessage,
@@ -284,6 +285,8 @@ app.post("/api/lead/submit", async (request, response, next) => {
 app.post("/api/admin/auth/login", async (request, response, next) => {
   try {
     const payload = loginSchema.parse(request.body);
+    await ensureDefaultAdminUsers();
+
     const user = await AdminUserModel.findOne({ email: payload.email, isActive: true });
     if (!user) return response.status(401).json({ message: "Invalid credentials" });
     const valid = await verifyPassword(payload.password, user.passwordHash);

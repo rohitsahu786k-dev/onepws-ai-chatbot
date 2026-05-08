@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { Button, Input } from "@onepws/ui";
 import { api } from "../../lib/api";
@@ -18,11 +19,15 @@ export default function LoginPage() {
     try {
       setLoading(true);
       setError("");
-      const { data } = await api.post("/api/admin/auth/login", { email, password });
+      const { data } = await api.post("/api/admin/auth/login", { email: email.trim().toLowerCase(), password });
       window.localStorage.setItem("onepws-admin-token", data.accessToken);
       router.push("/dashboard");
-    } catch {
-      setError("Unable to sign in. Check your email and password.");
+    } catch (error) {
+      if (axios.isAxiosError(error) && (!error.response || error.response.status >= 500)) {
+        setError("Sign-in service is not reachable. Check the deployment API and database settings.");
+      } else {
+        setError("Unable to sign in. Check your email and password.");
+      }
     } finally {
       setLoading(false);
     }

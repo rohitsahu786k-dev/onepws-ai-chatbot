@@ -3,24 +3,18 @@
 import axios from "axios";
 
 const getApiBaseUrl = () => {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const explicitApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const legacyApiUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
   if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return configuredUrl || "http://localhost:5000";
+    return explicitApiUrl || legacyApiUrl || "http://localhost:5000";
   }
 
-  if (typeof window !== "undefined" && configuredUrl) {
-    try {
-      const configuredHost = new URL(configuredUrl).hostname;
-      if (window.location.hostname === "chat.onepws.com" && configuredHost === "api.chat.onepws.com") {
-        return "";
-      }
-    } catch {
-      return configuredUrl;
-    }
+  if (explicitApiUrl) {
+    return explicitApiUrl;
   }
 
-  return configuredUrl || "";
+  return "";
 };
 
 const clientApiBaseUrl = getApiBaseUrl();

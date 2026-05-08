@@ -1,6 +1,57 @@
 import { hashPassword } from "./auth";
 import { AdminUserModel, AppSettingModel, DepartmentModel, FeatureFlagModel, PersonMappingModel, PromptConfigModel, RoutingRuleModel } from "./models";
 
+const defaultAdminUsers = [
+  {
+    firstName: "System",
+    lastName: "Admin",
+    email: "admin@onepws.com",
+    password: "OnepwsAdmin@123",
+    roles: ["super_admin"],
+  },
+  {
+    firstName: "Marketing",
+    lastName: "User",
+    email: "marketing@onepws.com",
+    password: "OnepwsMarketing@123",
+    roles: ["marketing"],
+  },
+] as const;
+
+export async function ensureDefaultAdminUsers({ resetExistingPasswords = false } = {}) {
+  for (const defaultUser of defaultAdminUsers) {
+    const email = defaultUser.email.toLowerCase();
+    const existing = await AdminUserModel.findOne({ email });
+
+    if (existing) {
+      const updates: Record<string, unknown> = {};
+
+      if (resetExistingPasswords) {
+        updates.passwordHash = await hashPassword(defaultUser.password);
+        updates.isActive = true;
+      }
+
+      if (!existing.roles?.length) {
+        updates.roles = [...defaultUser.roles];
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await AdminUserModel.updateOne({ _id: existing._id }, { $set: updates });
+      }
+      continue;
+    }
+
+    await AdminUserModel.create({
+      firstName: defaultUser.firstName,
+      lastName: defaultUser.lastName,
+      email,
+      passwordHash: await hashPassword(defaultUser.password),
+      roles: [...defaultUser.roles],
+      isActive: true,
+    });
+  }
+}
+
 export async function seedBaseData() {
   await DepartmentModel.deleteMany({});
   await PersonMappingModel.deleteMany({});
@@ -57,25 +108,5 @@ export async function seedBaseData() {
     { key: "widget.theme", value: { accent: "#db3d24" }, description: "Widget theme configuration", category: "widget" },
   ]);
 
-  const superPassword = await hashPassword("OnepwsAdmin@123");
-  const marketingPassword = await hashPassword("OnepwsMarketing@123");
-
-  await AdminUserModel.insertMany([
-    {
-      firstName: "System",
-      lastName: "Admin",
-      email: "admin@onepws.com",
-      passwordHash: superPassword,
-      roles: ["super_admin"],
-      isActive: true,
-    },
-    {
-      firstName: "Marketing",
-      lastName: "User",
-      email: "marketing@onepws.com",
-      passwordHash: marketingPassword,
-      roles: ["marketing"],
-      isActive: true,
-    },
-  ]);
+  await ensureDefaultAdminUsers({ resetExistingPasswords: true });
 }

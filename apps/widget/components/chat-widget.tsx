@@ -66,10 +66,24 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const apiBaseUrl = useMemo(() => {
+    const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5000";
+      return configuredUrl || "http://localhost:5000";
     }
-    return process.env.NEXT_PUBLIC_APP_URL ?? "https://api.chat.onepws.com";
+
+    if (typeof window !== "undefined" && configuredUrl) {
+      try {
+        const configuredHost = new URL(configuredUrl).hostname;
+        if (window.location.hostname === "chat.onepws.com" && configuredHost === "api.chat.onepws.com") {
+          return "";
+        }
+      } catch {
+        return configuredUrl;
+      }
+    }
+
+    return configuredUrl || "";
   }, []);
 
   useEffect(() => {

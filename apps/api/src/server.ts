@@ -161,6 +161,14 @@ app.get("/health", (_request, response) => {
   response.json({ ok: true });
 });
 
+app.get(["/", "/api"], (_request, response) => {
+  response.json({
+    ok: true,
+    service: "OnePWS API",
+    health: "/health",
+  });
+});
+
 app.post("/api/widget/init", async (request, response, next) => {
   try {
     const payload = widgetInitSchema.parse(request.body);
@@ -652,6 +660,14 @@ app.patch("/api/admin/settings", requireAuth(adminWriteRoles), async (request: A
   } catch (error) {
     next(error);
   }
+});
+
+app.use((request, response) => {
+  response.status(404).json({
+    message: "Route not found",
+    method: request.method,
+    path: request.path,
+  });
 });
 
 app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {

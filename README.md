@@ -102,9 +102,9 @@ npm run dev:admin
 
 Default URLs:
 
-- Widget preview: `http://localhost:3000`
-- Admin app: `http://localhost:3001`
-- API: `http://localhost:5000`
+- Widget preview: `https://chat.onepws.com` (or `http://localhost:3000` for development)
+- Admin app: `https://admin.chat.onepws.com` (or `http://localhost:3001` for development)
+- API: `https://api.chat.onepws.com` (or `http://localhost:5000` for development)
 
 ## Build
 
@@ -120,7 +120,7 @@ npm run build -w @onepws/admin
 Use the script-based embed snippet below:
 
 ```html
-<script async src="http://localhost:3000/embed.js"></script>
+<script async src="https://chat.onepws.com/embed.js"></script>
 ```
 
 For production, replace the URL with the deployed widget app URL.

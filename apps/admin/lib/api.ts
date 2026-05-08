@@ -2,7 +2,14 @@
 
 import axios from "axios";
 
-const clientApiBaseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5000";
+const getApiBaseUrl = () => {
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5000";
+  }
+  return process.env.NEXT_PUBLIC_APP_URL ?? "https://api.chat.onepws.com";
+};
+
+const clientApiBaseUrl = getApiBaseUrl();
 
 export function getToken() {
   if (typeof window === "undefined") return null;

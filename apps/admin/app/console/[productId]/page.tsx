@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card } from "@onepws/ui";
-import { AdminShell } from "../../components/admin-shell";
+import { AdminShell } from "../../../components/admin-shell";
 
 const consoles: Record<
   string,

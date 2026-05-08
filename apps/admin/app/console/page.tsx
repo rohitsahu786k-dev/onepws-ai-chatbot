@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card } from "@onepws/ui";
-import { AdminShell } from "../components/admin-shell";
+import { AdminShell } from "../../components/admin-shell";
 
 const consoleProducts = [
   {

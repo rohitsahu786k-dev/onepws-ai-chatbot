@@ -669,7 +669,11 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+export default app;
+
+if (!process.env.VERCEL) {
+  bootstrap().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

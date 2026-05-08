@@ -66,24 +66,14 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const apiBaseUrl = useMemo(() => {
-    const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const explicitApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+    const legacyApiUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      return configuredUrl || "http://localhost:5000";
+      return explicitApiUrl || legacyApiUrl || "http://localhost:5000";
     }
 
-    if (typeof window !== "undefined" && configuredUrl) {
-      try {
-        const configuredHost = new URL(configuredUrl).hostname;
-        if (window.location.hostname === "chat.onepws.com" && configuredHost === "api.chat.onepws.com") {
-          return "";
-        }
-      } catch {
-        return configuredUrl;
-      }
-    }
-
-    return configuredUrl || "";
+    return explicitApiUrl || legacyApiUrl || "https://api.chat.onepws.com";
   }, []);
 
   useEffect(() => {
@@ -146,9 +136,13 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
       );
     }
 
-    void boot().finally(() => {
-      if (!storedName || !storedEmail) setIdentityReady(false);
-    });
+    void boot()
+      .catch(() => {
+        setChatError("I could not connect to the OnePWS assistant. Please refresh and try again.");
+      })
+      .finally(() => {
+        if (!storedName || !storedEmail) setIdentityReady(false);
+      });
   }, [apiBaseUrl, setMessages, setSessionId]);
 
   useEffect(() => {
@@ -250,7 +244,11 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
   }
 
   async function handleIdentitySubmit() {
-    if (!sessionId || !identityName.trim() || !identityEmail.trim()) return;
+    if (!sessionId) {
+      setChatError("The OnePWS assistant is still connecting. Please refresh and try again.");
+      return;
+    }
+    if (!identityName.trim() || !identityEmail.trim()) return;
     setIdentityLoading(true);
     setChatError("");
 
@@ -382,11 +380,11 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
                     />
                     <Button
                       type="button"
-                      disabled={identityLoading || !identityName.trim() || !identityEmail.trim()}
+                      disabled={identityLoading || !sessionId || !identityName.trim() || !identityEmail.trim()}
                       onClick={() => void handleIdentitySubmit()}
                       className="h-10 w-full rounded-[14px] bg-[linear-gradient(135deg,#ea2d2d_0%,#cf1a28_100%)] px-4 text-[12px] font-medium text-white sm:h-11 sm:text-[13px]"
                     >
-                      {identityLoading ? "Checking..." : "Start chat"}
+                      {identityLoading ? "Checking..." : !sessionId ? "Connecting..." : "Start chat"}
                     </Button>
                   </div>
                   {chatError ? <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{chatError}</div> : null}

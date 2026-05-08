@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { OpenAI } from "openai";
 import type { ChatAttachment, ChatPipelineResult, Intent, LeadFields, SolutionCategory } from "@onepws/types";
 import { env } from "@onepws/config";
 import {
@@ -94,9 +94,10 @@ async function prepareAttachments(attachments: ChatAttachment[] | undefined) {
       }
 
       if (attachment.mimeType === "application/pdf") {
-        const pdfModule = await import("pdf-parse");
-        const pdfParse = (pdfModule as { default?: (buffer: Buffer) => Promise<{ text: string }> }).default ?? (pdfModule as unknown as (buffer: Buffer) => Promise<{ text: string }>);
-        const parsed = await pdfParse(decodeAttachmentData(attachment));
+        const { PDFParse } = await import("pdf-parse");
+        const parser = new PDFParse({ data: decodeAttachmentData(attachment) });
+        const parsed = await parser.getText();
+        await parser.destroy();
         return {
           name: attachment.name,
           mimeType: attachment.mimeType,

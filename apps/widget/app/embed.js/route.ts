@@ -12,7 +12,7 @@ export async function GET() {
       iframe.style.position = 'fixed';
       iframe.style.bottom = '18px';
       iframe.style.right = '18px';
-      iframe.style.width = '190px';
+      iframe.style.width = '74px';
       iframe.style.height = '76px';
       iframe.style.maxWidth = 'calc(100vw - 24px)';
       iframe.style.maxHeight = 'calc(100vh - 24px)';
@@ -28,8 +28,8 @@ export async function GET() {
         iframe.dataset.open = open ? 'true' : 'false';
         var isMobile = window.matchMedia('(max-width: 640px)').matches;
         if (!open) {
-          iframe.style.width = isMobile ? '74px' : '190px';
-          iframe.style.height = isMobile ? '74px' : '76px';
+          iframe.style.width = '74px';
+          iframe.style.height = '74px';
           iframe.style.bottom = isMobile ? '14px' : '18px';
           iframe.style.right = isMobile ? '14px' : '18px';
           return;

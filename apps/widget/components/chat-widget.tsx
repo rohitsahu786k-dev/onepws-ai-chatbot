@@ -163,6 +163,18 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
     window.parent.postMessage({ type: "ONEPWS_CHATBOT_SIZE", open }, "*");
   }, [embedded, open]);
 
+  useEffect(() => {
+    if (!embedded || typeof document === "undefined") return;
+    const previousHtmlBackground = document.documentElement.style.background;
+    const previousBodyBackground = document.body.style.background;
+    document.documentElement.style.background = "transparent";
+    document.body.style.background = "transparent";
+    return () => {
+      document.documentElement.style.background = previousHtmlBackground;
+      document.body.style.background = previousBodyBackground;
+    };
+  }, [embedded]);
+
   async function sendMessage(content: string) {
     if (!sessionId || !identityReady || (!content.trim() && attachments.length === 0)) return;
     setChatError("");
@@ -411,7 +423,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
                 >
                   {message.senderType === "assistant" ? (
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_10px_22px_rgba(23,19,15,0.10)] ring-1 ring-black/6 sm:h-12 sm:w-12">
-                      <Image src="/onepws-mark.png" alt="OnePWS mark" width={26} height={26} className="h-5 w-5 object-contain sm:h-6.5 sm:w-6.5" />
+                      <Bot className="h-5 w-5 text-[#ea2d2d] sm:h-6 sm:w-6" />
                     </div>
                   ) : null}
                   <div
@@ -433,7 +445,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
               {typing ? (
                 <div className="flex items-start gap-4">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_10px_22px_rgba(23,19,15,0.10)] ring-1 ring-black/6 sm:h-12 sm:w-12">
-                    <Image src="/onepws-mark.png" alt="OnePWS mark" width={26} height={26} className="h-5 w-5 object-contain sm:h-6.5 sm:w-6.5" />
+                    <Bot className="h-5 w-5 text-[#ea2d2d] sm:h-6 sm:w-6" />
                   </div>
                   <div className="flex items-center gap-2 rounded-[18px] rounded-bl-[8px] border border-black/6 bg-white px-4 py-3 text-sm text-black/55 shadow-[0_14px_30px_rgba(23,19,15,0.08)]">
                     <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-black/35" />

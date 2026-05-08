@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "steps": {
+    "install": {
+      "commands": [
+        {
+          "src": "package.json",
+          "dest": "package.json"
+        },
+        {
+          "src": "package-lock.json",
+          "dest": "package-lock.json"
+        },
+        {
+          "src": "apps/admin/package.json",
+          "dest": "apps/admin/package.json"
+        },
+        {
+          "src": "apps/api/package.json",
+          "dest": "apps/api/package.json"
+        },
+        {
+          "src": "apps/widget/package.json",
+          "dest": "apps/widget/package.json"
+        },
+        {
+          "src": "apps/worker/package.json",
+          "dest": "apps/worker/package.json"
+        },
+        {
+          "src": "packages/config/package.json",
+          "dest": "packages/config/package.json"
+        },
+        {
+          "src": "packages/core/package.json",
+          "dest": "packages/core/package.json"
+        },
+        {
+          "src": "packages/types/package.json",
+          "dest": "packages/types/package.json"
+        },
+        {
+          "src": "packages/ui/package.json",
+          "dest": "packages/ui/package.json"
+        },
+        {
+          "src": "packages/utils/package.json",
+          "dest": "packages/utils/package.json"
+        },
+        "..."
+      ]
+    }
+  }
+}

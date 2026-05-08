@@ -5,13 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/worker.ts",
+    "start": "tsx src/worker.ts",
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@onepws/config": "*",
-    "@onepws/core": "*"
-  },
-  "devDependencies": {
+    "@onepws/core": "*",
     "tsx": "^4.20.6"
   }
 }

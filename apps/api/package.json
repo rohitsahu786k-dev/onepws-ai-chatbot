@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
     "build": "tsc -p tsconfig.json",
     "seed": "tsx src/seed.ts",
     "import:website": "tsx src/import-website.ts"
@@ -22,9 +23,7 @@
     "helmet": "^8.1.0",
     "pino-http": "^11.0.0",
     "socket.io": "^4.8.1",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
-  },
-  "devDependencies": {
-    "tsx": "^4.20.6"
   }
 }

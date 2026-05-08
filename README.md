@@ -166,6 +166,9 @@ Every internal routing email includes `MARKETING_CC_EMAIL`.
 
 - Deploy `apps/widget` and `apps/admin` as separate Next.js apps.
 - Deploy `apps/api` and `apps/worker` as separate Node services.
+- On Railway, keep the service Root Directory as `/` for API and worker because they depend on shared workspace packages under `packages/*`.
+- For the API service, use config file `/apps/api/railway.json` if Railway does not auto-detect it.
+- For the worker service, use config file `/apps/worker/railway.json` if Railway does not auto-detect it.
 - Back the API and worker with shared MongoDB and Redis infrastructure.
 - Set production CORS values for `WIDGET_URL`, `ADMIN_URL`, and `ONEPWS_DOMAIN`.
 - Store all secrets in the deployment platform secret manager, not in code.

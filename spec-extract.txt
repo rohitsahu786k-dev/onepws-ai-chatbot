@@ -1,0 +1,1097 @@
+OnePWS AI Chatbot — Single-Brand
+Master Build Specification
+Role
+You are a senior full-stack architect and principal engineer. Build a production-grade AI chatbot
+web application for OnePWS only.
+This chatbot will run on onepws.com and must have knowledge of all business units under
+the group, but the product itself is a single-brand application for OnePWS.
+Use this document as the single source of truth to generate the complete web app codebase.
+1. Product Goal
+Build a complete multilingual AI chatbot platform for OnePWS that:
+● works on onepws.com
+● represents OnePWS as the main brand
+● has knowledge of all business units handled by the group
+● can answer questions about:
+○ control rooms
+○ control room consoles
+○ auditoriums
+○ corporate interiors
+○ integrated workspaces
+○ raised access flooring / false flooring
+○ modular operation theatres
+○ healthcare infrastructure / clean room related solutions
+● captures leads from visitors through natural multilingual conversations
+● qualifies leads intelligently
+● identifies which internal business unit should handle the enquiry
+● routes leads to the correct department or person
+● stores all chat data and lead data in the database
+● writes structured lead records into Google Sheets
+● sends internal summary emails through Gmail or SMTP
+● always CCs the marketing department on internal lead routing emails
+
+-- 1 of 32 --
+
+● includes a complete admin dashboard
+● includes analytics, routing management, prompt management, audit logs, and
+role-based access control
+● is built with a scalable production-ready architecture
+2. Product Scope Clarification
+This is not a multi-tenant or multi-brand SaaS product for now.
+This is a single application for OnePWS only.
+However, the chatbot must understand and classify enquiries across all business units
+associated with OnePWS.
+Important rule
+● The chatbot brand identity must always be OnePWS
+● The website is onepws.com
+● The chatbot may say that certain requirements are handled by the relevant internal team
+or business unit
+● The chatbot should not behave like three separate bots
+● The chatbot should behave like a group-level intelligent project advisor for OnePWS
+3. Knowledge Scope
+The OnePWS chatbot must have complete working knowledge of the following business
+categories.
+A. OnePWS Core Solutions
+● control rooms
+● control room consoles
+● auditoriums
+● corporate interiors
+● integrated workspaces
+● consultation for enterprise environments
+
+-- 2 of 32 --
+
+B. Flooring Solutions Knowledge
+● raised access flooring
+● false flooring
+● flooring systems for mission-critical environments
+● flooring applications for control rooms, data spaces, offices, and technical spaces
+C. Healthcare / OT Solutions Knowledge
+● modular operation theatres
+● healthcare infrastructure
+● clean room / OT-related project conversations
+● hospital infrastructure related enquiry qualification
+D. Cross-Solution Understanding
+The chatbot must understand that some customers may ask for combined requirements such
+as:
+● control room + flooring
+● auditorium + interiors
+● OT + clean room + flooring
+● enterprise project consultation requiring multiple internal teams
+It must be able to classify such enquiries and route them correctly.
+4. Core Product Behavior
+The chatbot must behave like:
+● a professional multilingual sales and enquiry assistant
+● a technical pre-sales assistant
+● a project qualification assistant
+● a lead capture and routing system
+● a OnePWS group knowledge assistant
+Tone requirements
+● professional
+
+-- 3 of 32 --
+
+● consultative
+● concise
+● enterprise-oriented
+● confident but not aggressive
+● multilingual
+● should support English, Hindi, and Hinglish at minimum
+● should respond in the same language as the user whenever possible
+Guardrails
+● do not invent pricing
+● do not overcommit on technical specifications without confirmation
+● do not claim site visits or project commitments automatically
+● do not disclose internal-only data
+● if uncertain, offer to connect the appropriate team
+5. Main User Journeys
+Journey 1: General business enquiry
+Example:
+● what do you do
+● what solutions do you offer
+● do you handle control rooms or flooring
+Expected behavior:
+● explain relevant capabilities
+● ask what kind of project the visitor is working on
+● guide toward the right solution category
+Journey 2: New sales lead
+Example:
+● we need a control room setup
+● we need consoles for a plant
+● we need raised flooring
+
+-- 4 of 32 --
+
+● we need modular OT solutions
+Expected behavior:
+● identify the actual requirement
+● collect lead details naturally
+● capture project details
+● qualify the lead
+● submit internally
+Journey 3: Consultation / layout request
+Example:
+● can your team help with planning
+● I need design consultation
+● I want to discuss a project layout
+Expected behavior:
+● collect relevant project details
+● ask whether the visitor wants a callback / consultation
+● route the lead to the appropriate team
+Journey 4: Department connect request
+Example:
+● connect me with your sales team
+● I want to talk to your technical department
+● connect me with the interiors team
+Expected behavior:
+● collect enough lead details first
+● identify requested department
+● route to that department
+● send summary email
+● CC marketing
+Journey 5: Specific person request
+Example:
+
+-- 5 of 32 --
+
+● connect me to a specific salesperson or manager
+Expected behavior:
+● collect lead details
+● capture why they want that person
+● route email to mapped person if available
+● CC marketing
+● fallback to department inbox if person is unavailable
+Journey 6: Multi-solution enterprise project enquiry
+Example:
+● we need a control room with ergonomic consoles and flooring
+● we need healthcare infra plus OT planning
+Expected behavior:
+● classify all solution needs
+● collect full project context
+● route to primary team and note secondary internal involvement
+● generate a richer summary for internal follow-up
+6. Functional Requirements
+A. Chatbot Features
+● multilingual chat support
+● language detection
+● same-language responses where possible
+● professional conversational tone
+● dynamic lead qualification flow
+● intelligent next-question logic
+● onepws-only branded identity
+● knowledge of all business units
+● department connect handling
+● specific person routing support
+● source tracking
+● page-aware behavior
+
+-- 6 of 32 --
+
+● transcript persistence
+● structured AI extraction
+● conversation summarization
+● lead scoring
+● customer acknowledgment option
+B. Lead Capture Features
+The chatbot should capture these fields when possible:
+● full name
+● phone number
+● email address
+● company name
+● designation
+● city
+● country
+● project location
+● industry
+● requirement category
+● business unit / solution interest
+● requirement summary
+● project type
+● budget
+● timeline
+● operator count if relevant
+● department requested
+● person requested
+● preferred contact mode
+● preferred contact time
+● source page
+● referrer
+● UTM source
+● UTM medium
+● UTM campaign
+● language
+● urgency
+● lead score
+● lead temperature
+● internal summary
+● conclusion
+C. Admin Features
+
+-- 7 of 32 --
+
+● admin login
+● role-based access control
+● dashboard overview
+● leads table
+● lead detail page
+● session list
+● transcript viewer
+● routing rules manager
+● department manager
+● person email mapping manager
+● prompt manager
+● email logs
+● queue/job logs
+● analytics dashboard
+● feature flag manager
+● settings manager
+● audit logs viewer
+● CSV export
+● filters by date, status, department, solution type, lead temperature, source page
+D. Automation Features
+● auto lead creation from chat
+● auto lead update during conversation
+● auto Google Sheet append
+● auto internal summary email sending
+● auto department routing
+● auto person routing
+● marketing CC on every internal lead routing email
+● retry failed external jobs
+● optional customer acknowledgment email
+● duplicate lead detection based on phone/email/company
+E. Pro Features
+● structured extraction JSON per message
+● prompt versioning
+● configurable routing rules from admin panel
+● hot/warm/cold lead scoring
+● fallback routing
+● multilingual internal summary support if needed
+● transcript search
+● activity timeline for each lead
+
+-- 8 of 32 --
+
+● audit logs for admin changes
+● settings-driven architecture
+● queue retry handling
+● dead-letter style failed job visibility
+7. Technical Stack
+Frontend
+● Next.js latest stable with App Router
+● TypeScript
+● Tailwind CSS
+● shadcn/ui
+● Zustand
+● React Hook Form + Zod
+● Socket.IO client
+● Recharts
+● Framer Motion
+Backend
+● Node.js
+● Express.js
+● TypeScript
+● Socket.IO
+● MongoDB with Mongoose
+● Redis + BullMQ
+● OpenAI API integration
+● Google Sheets API integration
+● Gmail API with SMTP fallback
+● JWT auth
+● RBAC middleware
+● Pino logger
+● Zod validation
+Infrastructure
+● Docker support
+● docker-compose for local development
+
+-- 9 of 32 --
+
+● env-based configuration
+● queue workers
+● security middleware
+● retry logic for external integrations
+● graceful error handling
+8. High-Level Architecture
+Visitor Browser
+-> OnePWS Chat Widget
+-> API Server (Express)
+-> Socket.IO Realtime Layer
+-> AI Orchestration Pipeline
+-> Lead Service
+-> Routing Service
+-> Queue Service (BullMQ)
+-> Integrations:
+- MongoDB
+- Redis
+- OpenAI
+- Google Sheets
+- Gmail API / SMTP
+-> Admin Dashboard
+Monorepo structure
+/apps
+/widget
+/admin
+/api
+/worker
+/packages
+/ui
+/types
+/config
+/utils
+/prompts
+/email-templates
+/eslint-config
+/tsconfig
+
+-- 10 of 32 --
+
+/docs
+/infra
+9. Core Architecture Modules
+1. Widget App
+Responsibilities:
+● embeddable chat interface
+● message UI
+● session persistence
+● source metadata capture
+● page context capture
+● socket communication
+2. API Server
+Responsibilities:
+● public endpoints
+● admin endpoints
+● auth
+● session handling
+● lead creation/update
+● routing rule evaluation
+● queueing background jobs
+3. Realtime Layer
+Responsibilities:
+● socket communication
+● typing states
+● streaming message flow if implemented
+● session-aware response handling
+4. AI Orchestration Layer
+
+-- 11 of 32 --
+
+Responsibilities:
+● language detection
+● intent classification
+● entity extraction
+● next question decision
+● assistant response generation
+● summarization
+● lead scoring support
+5. Lead Service
+Responsibilities:
+● create/update lead drafts
+● merge extracted fields
+● deduplication
+● score calculation
+● status transitions
+6. Routing Service
+Responsibilities:
+● determine solution category
+● identify internal department
+● identify person mapping if requested
+● determine routing email targets
+● apply fallback rules
+7. Email Service
+Responsibilities:
+● generate email templates
+● send internal summary emails
+● send department routing emails
+● send specific-person emails
+● send optional customer acknowledgment emails
+● log all sends
+8. Google Sheets Service
+
+-- 12 of 32 --
+
+Responsibilities:
+● append lead to operational sheet
+● append lead to master sheet if configured
+● queue-based retries
+● sync status logging
+9. Admin Dashboard
+Responsibilities:
+● show all leads
+● show transcripts
+● manage routing
+● manage departments
+● manage people mappings
+● manage prompts
+● view analytics
+● view audit logs
+10. Worker Service
+Responsibilities:
+● process BullMQ jobs
+● emails
+● sheet sync
+● summary generation if asynchronous
+● failure logging and retries
+10. Main Data Models
+Implement Mongoose schemas with timestamps, indexes, validation, and clean relations.
+Department
+● name
+● slug
+● primaryEmail
+
+-- 13 of 32 --
+
+● ccEmails
+● fallbackEmail
+● description
+● isActive
+PersonMapping
+● fullName
+● email
+● role
+● departmentSlug
+● aliases
+● isActive
+RoutingRule
+● solutionKeywords
+● intents
+● targetDepartmentSlug
+● targetEmail
+● ccEmails
+● priority
+● fallback
+● isActive
+AdminUser
+● firstName
+● lastName
+● email
+● passwordHash
+● roles
+● isActive
+● lastLoginAt
+ChatSession
+● sessionId
+● visitorId
+● pageUrl
+● pageTitle
+● referrer
+
+-- 14 of 32 --
+
+● utmSource
+● utmMedium
+● utmCampaign
+● utmTerm
+● utmContent
+● ipHash
+● userAgent
+● preferredLanguage
+● detectedLanguage
+● currentIntent
+● currentSolutionCategory
+● status
+● startedAt
+● endedAt
+Message
+● sessionId
+● senderType (user, assistant, system, admin)
+● content
+● normalizedContent
+● language
+● metadata
+● createdAt
+Lead
+● leadId
+● sessionId
+● status
+● assignedDepartment
+● assignedPerson
+● fullName
+● email
+● phone
+● company
+● designation
+● city
+● country
+● projectLocation
+● industry
+● businessNeed
+● solutionCategory
+
+-- 15 of 32 --
+
+● projectType
+● requirementSummary
+● budget
+● timeline
+● operatorCount
+● preferredContactMode
+● preferredContactTime
+● departmentRequested
+● personRequested
+● urgency
+● summary
+● conclusion
+● leadScore
+● leadTemperature
+● sourcePage
+● referrer
+● utmSource
+● utmMedium
+● utmCampaign
+● language
+● duplicateOfLeadId
+● notes
+PromptConfig
+● version
+● name
+● systemPrompt
+● qualificationPrompt
+● extractionPrompt
+● summaryPrompt
+● routingPrompt
+● languagePolicy
+● tonePolicy
+● isActive
+EmailLog
+● leadId
+● sessionId
+● type
+● provider
+● to
+
+-- 16 of 32 --
+
+● cc
+● bcc
+● subject
+● html
+● text
+● status
+● providerMessageId
+● errorMessage
+● sentAt
+JobLog
+● jobType
+● payload
+● status
+● attemptCount
+● errorMessage
+● processedAt
+AuditLog
+● actorId
+● actorType
+● action
+● entityType
+● entityId
+● before
+● after
+● ip
+● userAgent
+● createdAt
+FeatureFlag
+● key
+● description
+● enabled
+AppSetting
+● key
+● value
+
+-- 17 of 32 --
+
+● description
+● category
+11. Solution Classification Rules
+The chatbot must classify enquiries into one or more of these solution categories.
+Solution categories
+● control_room
+● control_room_consoles
+● auditorium
+● corporate_interiors
+● integrated_workspace
+● raised_access_flooring
+● false_flooring
+● modular_operation_theatre
+● healthcare_infrastructure
+● clean_room_related
+● general_consultation
+● mixed_requirement
+● unknown
+Classification behavior
+● if one clear category is found, set it directly
+● if multiple categories are found, set mixed_requirement
+● preserve subcategory tags internally in metadata
+● use classification to drive routing and questioning
+12. Required AI Pipeline
+Implement AI as a structured pipeline, not a single free-form call.
+Per message pipeline
+
+-- 18 of 32 --
+
+1. detect language
+2. classify intent
+3. classify solution category
+4. extract structured entities
+5. update lead draft
+6. determine missing fields
+7. choose next best question
+8. generate final assistant reply
+9. when enough data is available, generate summary and conclusion
+10. trigger lead submission workflow when conditions are met
+Required intents
+● sales_enquiry
+● product_enquiry
+● consultation_request
+● layout_request
+● department_connect
+● person_connect
+● support_request
+● general_information
+● vendor_query
+● unknown
+Required extracted entities
+● name
+● email
+● phone
+● company
+● designation
+● requirement
+● solution_category
+● location
+● timeline
+● budget
+● department_requested
+● person_requested
+● language
+● urgency
+Lead scoring guidance
+
+-- 19 of 32 --
+
+Score from 0 to 100 using:
+● project clarity
+● urgency
+● contact completeness
+● business relevance
+● likely seriousness
+● timeline quality
+● multi-solution scope value
+Lead temperatures
+● 80 to 100 = hot
+● 50 to 79 = warm
+● below 50 = cold
+13. Routing Logic
+This is a single-brand OnePWS app, but routing must still identify the correct internal handling
+team.
+Department routing examples
+● control room -> control room team
+● consoles -> console team
+● auditorium -> project/interiors/auditorium team
+● corporate interiors -> interiors team
+● raised flooring / false flooring -> flooring team
+● modular OT / healthcare infra -> healthcare / OT team
+● mixed requirement -> sales coordination / enterprise solutions team
+● unknown -> fallback sales email + marketing cc
+Person routing behavior
+● if a person is explicitly requested, first collect enough lead details
+● then check person mapping
+● if found, send to that person and CC marketing
+● if not found, fallback to mapped department and CC marketing
+
+-- 20 of 32 --
+
+Mandatory rule
+All internal routing emails must include the marketing CC email.
+14. Required Pages
+Widget App
+● floating launcher
+● chat panel
+● thread UI
+● typing indicator
+● quick replies
+● form fallback
+● success state banner
+Admin App
+● login page
+● dashboard overview
+● leads list
+● lead detail page
+● sessions list
+● transcript viewer
+● analytics page
+● routing rules page
+● departments page
+● people mappings page
+● prompts page
+● email logs page
+● job logs page
+● settings page
+● audit logs page
+15. Public and Admin APIs
+
+-- 21 of 32 --
+
+Public APIs
+● POST /api/widget/init
+● POST /api/chat/session
+● POST /api/chat/message
+● GET /api/chat/history/:sessionId
+● POST /api/lead/submit
+Admin APIs
+● POST /api/admin/auth/login
+● POST /api/admin/auth/logout
+● GET /api/admin/me
+● GET /api/admin/leads
+● GET /api/admin/leads/:leadId
+● PATCH /api/admin/leads/:leadId
+● GET /api/admin/sessions
+● GET /api/admin/sessions/:sessionId/messages
+● GET /api/admin/analytics/overview
+● GET /api/admin/analytics/sources
+● GET /api/admin/routing-rules
+● POST /api/admin/routing-rules
+● PATCH /api/admin/routing-rules/:id
+● GET /api/admin/departments
+● POST /api/admin/departments
+● PATCH /api/admin/departments/:id
+● GET /api/admin/people
+● POST /api/admin/people
+● PATCH /api/admin/people/:id
+● GET /api/admin/prompts
+● POST /api/admin/prompts
+● PATCH /api/admin/prompts/:id/activate
+● GET /api/admin/email-logs
+● GET /api/admin/job-logs
+● GET /api/admin/audit-logs
+● GET /api/admin/settings
+● PATCH /api/admin/settings
+
+-- 22 of 32 --
+
+16. Email Workflows
+Implement HTML + text email templates.
+Email types
+1. new lead summary
+2. department routing email
+3. specific person routing email
+4. customer acknowledgment email
+5. failed job alert (optional)
+Email rules
+● all internal emails must CC marketing
+● route using solution category, requested department, requested person, and routing
+rules
+● log every send in EmailLog
+● queue all email sends via BullMQ
+● retry transient failures automatically
+17. Google Sheets Workflow
+Implement service to append lead rows into:
+● OnePWS operational sheet
+● optional master sheet if configured
+Suggested sheet columns
+● dateTime
+● leadId
+● sessionId
+● fullName
+● company
+● email
+● phone
+● city
+
+-- 23 of 32 --
+
+● country
+● projectLocation
+● industry
+● solutionCategory
+● requirementSummary
+● budget
+● timeline
+● departmentRequested
+● personRequested
+● urgency
+● leadScore
+● leadTemperature
+● sourcePage
+● referrer
+● utmSource
+● utmMedium
+● utmCampaign
+● language
+● summary
+● conclusion
+● assignedDepartment
+● assignedPerson
+● status
+Append rules
+● every qualified lead must be appended
+● use queue-based execution
+● log sync status
+● retry on failure
+18. Authentication and RBAC
+Roles
+● super_admin
+● marketing
+● sales
+● department_manager
+
+-- 24 of 32 --
+
+● viewer
+Permissions
+● super_admin: full access
+● marketing: leads, analytics, logs, settings read access where useful
+● sales: lead access and scoped actions
+● department_manager: department-scoped visibility and actions
+● viewer: read-only
+Auth requirements
+● JWT access tokens
+● refresh token strategy or secure session strategy
+● bcrypt password hashing
+● role guard middleware
+● audit logs for all admin mutations
+19. Analytics Requirements
+Dashboard must include:
+● total leads
+● leads by day/week/month
+● leads by solution category
+● leads by assigned department
+● hot/warm/cold distribution
+● language distribution
+● top landing pages
+● chat started vs lead captured funnel
+● routing volume by department
+● email success rate
+Use Recharts for dashboards.
+20. Embeddable Widget Requirements
+
+-- 25 of 32 --
+
+The widget must:
+● be embeddable on WordPress
+● support a script-based embed option
+● load asynchronously
+● capture page and UTM context
+● show OnePWS branding
+● preserve session state as much as possible
+● connect securely to backend
+● allow theme customization from config
+Include example embed snippet in README.
+21. UI Requirements
+Widget UI
+● clean modern enterprise style
+● floating chat button
+● responsive panel or drawer
+● message bubbles
+● typing indicator
+● quick reply chips
+● fallback lead form
+● submission success state
+Admin UI
+● modern SaaS-style layout
+● sidebar navigation
+● search/filter/sort support
+● paginated data tables
+● lead detail with activity timeline
+● transcript panel
+● settings forms
+● analytics cards and charts
+
+-- 26 of 32 --
+
+22. Validation and Error Handling
+Implement:
+● shared Zod schemas
+● request validation middleware
+● standard API error responses
+● frontend validation
+● global error boundary
+● centralized backend error middleware
+● retry strategy for OpenAI, Gmail, and Sheets
+● graceful fallback user messages if AI or integrations fail
+23. Security Requirements
+Mandatory:
+● helmet
+● CORS allowlist
+● rate limiting
+● secure cookies if used
+● XSS-safe rendering
+● no secrets in code
+● input sanitization for storage/display
+● audit logs
+● no plaintext passwords
+● hidden stack traces in production
+● optional CAPTCHA/Turnstile hook support
+24. Environment Variables
+Create a complete .env.example with at least the following keys:
+NODE_ENV=development
+PORT=5000
+APP_NAME=ONEPWS_AI_CHATBOT
+APP_URL=http://localhost:5000
+
+-- 27 of 32 --
+
+WIDGET_URL=http://localhost:3000
+ADMIN_URL=http://localhost:3001
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+SESSION_SECRET=
+ENCRYPTION_SECRET=
+MONGODB_URI=
+REDIS_URL=
+REDIS_HOST=
+REDIS_PORT=
+REDIS_USERNAME=
+REDIS_PASSWORD=
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1
+OPENAI_SUMMARY_MODEL=gpt-4.1-mini
+OPENAI_EXTRACTION_MODEL=gpt-4.1-mini
+GOOGLE_PROJECT_ID=
+GOOGLE_CLIENT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+GOOGLE_SHEETS_MASTER_ID=
+GOOGLE_SHEETS_ONEPWS_ID=
+GMAIL_SENDER_NAME=OnePWS Lead Bot
+GMAIL_FROM_EMAIL=
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_REDIRECT_URI=https://developers.google.com/oauthplayground
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+MARKETING_CC_EMAIL=
+FALLBACK_LEAD_EMAIL=
+ONEPWS_DOMAIN=https://onepws.com
+
+-- 28 of 32 --
+
+DEPT_CONTROL_ROOM_EMAIL=
+DEPT_CONSOLES_EMAIL=
+DEPT_INTERIORS_EMAIL=
+DEPT_FLOORING_EMAIL=
+DEPT_MODULAR_OT_EMAIL=
+DEPT_SUPPORT_EMAIL=
+DEPT_ENTERPRISE_SOLUTIONS_EMAIL=
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+LOG_LEVEL=info
+ENABLE_EMAIL=true
+ENABLE_GOOGLE_SHEETS=true
+ENABLE_LEAD_SCORING=true
+ENABLE_CUSTOMER_ACK_EMAIL=false
+ENABLE_FILE_UPLOAD=false
+ENABLE_RAG=false
+25. Packages to Use
+Backend dependencies
+● express
+● cors
+● dotenv
+● helmet
+● compression
+● pino
+● pino-http
+● socket.io
+● mongoose
+● jsonwebtoken
+● bcryptjs
+● zod
+● openai
+● axios
+● bullmq
+
+-- 29 of 32 --
+
+● ioredis
+● googleapis
+● nodemailer
+● cookie-parser
+● express-rate-limit
+● uuid
+● dayjs
+● sanitize-html
+Frontend dependencies
+● next
+● react
+● react-dom
+● typescript
+● tailwindcss
+● shadcn/ui
+● socket.io-client
+● zustand
+● react-hook-form
+● zod
+● @hookform/resolvers
+● framer-motion
+● lucide-react
+● recharts
+● dayjs
+● axios
+26. Seed Data Requirements
+Seed at minimum:
+● departments for all major solution types
+● sample person mappings
+● routing rules for all solution categories
+● one super admin user
+● one marketing user
+● one sample active prompt config
+● one feature flags set
+● one app settings seed
+
+-- 30 of 32 --
+
+Example departments:
+● control-room
+● consoles
+● interiors
+● flooring
+● modular-ot
+● enterprise-solutions
+● support
+27. README Requirements
+README must include:
+● project overview
+● architecture overview
+● local setup instructions
+● environment variable setup
+● docker instructions
+● seeding instructions
+● running widget/admin/api/worker
+● Google Sheets setup guide
+● Gmail API setup guide
+● WordPress embed instructions
+● deployment notes
+28. Non-Functional Requirements
+● responsive UI
+● clean loading states
+● scalable queue-driven architecture
+● maintainable codebase
+● configuration-driven routing
+● fast admin search/filter behavior
+● proper database indexes
+● pagination for large data tables
+● timezone-safe date handling
+
+-- 31 of 32 --
+
+29. Output Expectations
+Generate the full working codebase.
+Do not return only mockups or pseudo-code.
+Do not skip backend logic.
+Do not leave integrations as TODO unless clearly isolated with working stubs and instructions.
+Prefer production-minded defaults.
+Use realistic seed data.
+Where external credentials are needed, wire everything fully and document how to supply them.
+30. Final Instruction
+Now build the complete OnePWS AI Chatbot application based on this specification.
+Priority order:
+1. complete architecture
+2. working core chat and lead flows
+3. admin dashboard
+4. routing and integrations
+5. polish
+The generated output should be suitable for opening in an AI code editor and continuing
+implementation with minimal clarification.
+
+-- 32 of 32 --
+

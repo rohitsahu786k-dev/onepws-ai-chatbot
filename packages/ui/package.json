@@ -1,0 +1,13 @@
+{
+  "name": "@onepws/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "dependencies": {
+    "@onepws/utils": "*",
+    "class-variance-authority": "^0.7.1",
+    "lucide-react": "^0.542.0",
+    "react": "^19.1.1"
+  }
+}

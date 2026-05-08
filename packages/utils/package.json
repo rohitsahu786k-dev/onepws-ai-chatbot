@@ -1,0 +1,13 @@
+{
+  "name": "@onepws/utils",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@onepws/types": "*",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.18",
+    "tailwind-merge": "^3.3.1"
+  }
+}

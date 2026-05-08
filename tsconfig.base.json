@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@onepws/config": ["packages/config/src"],
+      "@onepws/core": ["packages/core/src"],
+      "@onepws/types": ["packages/types/src"],
+      "@onepws/ui": ["packages/ui/src"],
+      "@onepws/utils": ["packages/utils/src"]
+    }
+  }
+}

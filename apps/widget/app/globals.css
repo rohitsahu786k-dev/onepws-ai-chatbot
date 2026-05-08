@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f1e8;
+  --foreground: #17130f;
+  --accent: #ea2d2d;
+  --accent-soft: #ffd9d9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgba(234, 45, 45, 0.16), transparent 28%),
+    linear-gradient(180deg, #f7f1e8 0%, #efe6d7 100%);
+  color: var(--foreground);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.onepws-chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(207, 26, 40, 0.85) rgba(17, 17, 20, 0.08);
+}
+
+.onepws-chat-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.onepws-chat-scroll::-webkit-scrollbar-track {
+  margin: 10px 0;
+  border-radius: 999px;
+  background: rgba(17, 17, 20, 0.08);
+}
+
+.onepws-chat-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(0, 0, 0, 0);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ea2d2d 0%, #b80d37 100%);
+  background-clip: padding-box;
+}
+
+.onepws-chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f35656 0%, #cb1c46 100%);
+  background-clip: padding-box;
+}

@@ -1,0 +1,39 @@
+{
+  "name": "onepws-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OnePWS AI chatbot monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently --shell powershell \"npm run dev:api\" \"npm run dev:widget\" \"npm run dev:admin\"",
+    "dev:widget": "npm run dev -w @onepws/widget",
+    "dev:admin": "npm run dev -w @onepws/admin",
+    "dev:api": "npm run dev -w @onepws/api",
+    "dev:worker": "npm run dev -w @onepws/worker",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "seed": "npm run seed -w @onepws/api",
+    "format": "npm run format --workspaces --if-present"
+  },
+  "keywords": [
+    "onepws",
+    "chatbot",
+    "nextjs",
+    "express",
+    "mongodb",
+    "bullmq"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}

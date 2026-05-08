@@ -1,0 +1,15 @@
+node_modules
+.next
+dist
+coverage
+.env
+.env.local
+.turbo
+*.log
+npm-debug.log*
+.DS_Store
+apps/*/.next
+apps/*/dist
+apps/*/node_modules
+packages/*/dist
+packages/*/node_modules

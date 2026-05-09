@@ -5,19 +5,54 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { Bot, CheckCheck, Paperclip, Send, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Bot, CheckCheck, Mic, Paperclip, Send, ShieldCheck, Sparkles, X } from "lucide-react";
 import { Button, Card, Input } from "@onepws/ui";
 import type { ChatAttachment } from "@onepws/types";
 import { useChatStore } from "../store/chat-store";
 
 const quickReplies = [
-  "We need a control room setup",
-  "Do you handle raised access flooring?",
-  "I want modular OT consultation",
+  "Plan a control room setup",
+  "Suggest raised access flooring",
+  "Guide me on modular OT",
 ];
 
 const solutionOptions = ["Control room", "Raised access flooring", "Corporate interiors", "Modular OT"];
 const timelineOptions = ["Urgent", "1-3 months", "3-6 months"];
+
+type VoiceStatus = "idle" | "connecting" | "listening" | "thinking" | "searching" | "speaking" | "error";
+
+type RealtimeFunctionCall = {
+  type?: string;
+  name?: string;
+  call_id?: string;
+  arguments?: string;
+};
+
+type RealtimeServerEvent = {
+  type?: string;
+  delta?: string;
+  transcript?: string;
+  item_id?: string;
+  response?: {
+    output?: RealtimeFunctionCall[];
+  };
+  error?: {
+    message?: string;
+  };
+};
+
+function voiceStatusText(status: VoiceStatus) {
+  const labels: Record<VoiceStatus, string> = {
+    idle: "Voice consultant ready",
+    connecting: "Connecting...",
+    listening: "Listening...",
+    thinking: "Thinking through the best fit...",
+    searching: "Checking OnePWS context...",
+    speaking: "Speaking with you...",
+    error: "Voice unavailable",
+  };
+  return labels[status];
+}
 
 function renderMessageContent(content: string) {
   return content.split(/\n{2,}/).map((paragraph, paragraphIndex) => (
@@ -61,9 +96,19 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
   const [guidedSolution, setGuidedSolution] = useState(solutionOptions[0]);
   const [guidedTimeline, setGuidedTimeline] = useState(timelineOptions[1]);
   const [guidedLocation, setGuidedLocation] = useState("");
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
+  const [voiceConnected, setVoiceConnected] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+  const [liveTranscript, setLiveTranscript] = useState("");
   const { sessionId, messages, typing, setSessionId, addMessage, setMessages, setTyping } = useChatStore();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const realtimeChannelRef = useRef<RTCDataChannel | null>(null);
+  const realtimeStreamRef = useRef<MediaStream | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const assistantTranscriptRef = useRef("");
+  const transcribedItemIdsRef = useRef(new Set<string>());
 
   const apiBaseUrl = useMemo(() => {
     const explicitApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
@@ -168,6 +213,251 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
       document.body.style.background = previousBodyBackground;
     };
   }, [embedded]);
+
+  useEffect(() => () => stopVoiceSession(), []);
+
+  function sendRealtimeEvent(event: Record<string, unknown>) {
+    const channel = realtimeChannelRef.current;
+    if (channel?.readyState === "open") {
+      channel.send(JSON.stringify(event));
+    }
+  }
+
+  function cleanupVoiceSession() {
+    realtimeChannelRef.current?.close();
+    peerConnectionRef.current?.close();
+    realtimeStreamRef.current?.getTracks().forEach((track) => track.stop());
+    remoteAudioRef.current?.pause();
+    realtimeChannelRef.current = null;
+    peerConnectionRef.current = null;
+    realtimeStreamRef.current = null;
+    remoteAudioRef.current = null;
+    assistantTranscriptRef.current = "";
+    setVoiceConnected(false);
+    setLiveTranscript("");
+  }
+
+  function stopVoiceSession() {
+    cleanupVoiceSession();
+    setVoiceStatus("idle");
+    setVoiceError("");
+  }
+
+  async function handleRealtimeFunctionCall(item: RealtimeFunctionCall) {
+    if (!item.call_id || !item.name) return;
+
+    let output: Record<string, unknown>;
+    try {
+      const args = item.arguments ? JSON.parse(item.arguments) : {};
+      if (item.name === "get_onepws_knowledge") {
+        setVoiceStatus("searching");
+        const { data } = await axios.post(`${apiBaseUrl}/api/realtime/knowledge`, {
+          query: String(args.query ?? ""),
+        });
+        output = {
+          ok: true,
+          context: data.context,
+          snippets: data.snippets,
+        };
+      } else if (item.name === "capture_onepws_lead") {
+        if (!sessionId) throw new Error("Missing session");
+        const { data } = await axios.post(`${apiBaseUrl}/api/lead/submit`, {
+          sessionId,
+          fullName: args.fullName ?? identityName,
+          email: args.email ?? identityEmail,
+          phone: args.phone,
+          company: args.company,
+          industry: args.industry,
+          requirementSummary: args.requirementSummary,
+          projectLocation: args.projectLocation,
+          timeline: args.timeline,
+          budget: args.budget,
+          operatorCount: args.operatorCount,
+          preferredContactTime: args.preferredContactTime,
+          preferredContactMode: "voice",
+        });
+        output = { ok: true, leadId: data.leadId, status: data.status };
+      } else if (item.name === "request_human_handoff") {
+        if (!sessionId) throw new Error("Missing session");
+        const reason = String(args.reason ?? "Voice handoff requested");
+        const { data } = await axios.post(`${apiBaseUrl}/api/lead/submit`, {
+          sessionId,
+          fullName: identityName,
+          email: identityEmail,
+          requirementSummary: reason,
+          preferredContactMode: args.preferredChannel ?? "any",
+          urgency: "handoff_requested",
+        });
+        output = { ok: true, leadId: data.leadId, handoffRequested: true };
+      } else {
+        output = { ok: false, error: `Unsupported function: ${item.name}` };
+      }
+    } catch (error) {
+      output = {
+        ok: false,
+        error: error instanceof Error ? error.message : "Tool call failed",
+      };
+    }
+
+    sendRealtimeEvent({
+      type: "conversation.item.create",
+      item: {
+        type: "function_call_output",
+        call_id: item.call_id,
+        output: JSON.stringify(output),
+      },
+    });
+    sendRealtimeEvent({ type: "response.create" });
+    setVoiceStatus("thinking");
+  }
+
+  async function handleRealtimeEvent(event: RealtimeServerEvent) {
+    switch (event.type) {
+      case "input_audio_buffer.speech_started":
+        setLiveTranscript("");
+        setVoiceStatus("listening");
+        break;
+      case "input_audio_buffer.speech_stopped":
+        setVoiceStatus("thinking");
+        break;
+      case "conversation.item.input_audio_transcription.delta":
+        if (event.delta) setLiveTranscript((current) => `${current}${event.delta}`.slice(-420));
+        break;
+      case "conversation.item.input_audio_transcription.completed": {
+        const transcript = event.transcript?.trim();
+        if (transcript && (!event.item_id || !transcribedItemIdsRef.current.has(event.item_id))) {
+          if (event.item_id) transcribedItemIdsRef.current.add(event.item_id);
+          addMessage({ senderType: "user", content: transcript, createdAt: new Date().toISOString() });
+        }
+        setLiveTranscript("");
+        setVoiceStatus("thinking");
+        break;
+      }
+      case "response.output_audio_transcript.delta":
+      case "response.audio_transcript.delta":
+      case "response.output_text.delta":
+      case "response.text.delta":
+        if (event.delta) assistantTranscriptRef.current += event.delta;
+        setVoiceStatus("speaking");
+        break;
+      case "response.output_audio_transcript.done":
+      case "response.audio_transcript.done": {
+        const transcript = (event.transcript ?? assistantTranscriptRef.current).trim();
+        if (transcript) addMessage({ senderType: "assistant", content: transcript, createdAt: new Date().toISOString() });
+        assistantTranscriptRef.current = "";
+        setVoiceStatus("listening");
+        break;
+      }
+      case "response.done": {
+        const functionCalls = event.response?.output?.filter((item) => item.type === "function_call") ?? [];
+        for (const functionCall of functionCalls) {
+          await handleRealtimeFunctionCall(functionCall);
+        }
+        if (functionCalls.length === 0) setVoiceStatus("listening");
+        break;
+      }
+      case "error":
+        setVoiceError(event.error?.message ?? "Realtime voice error.");
+        setVoiceStatus("error");
+        break;
+      default:
+        break;
+    }
+  }
+
+  async function startVoiceSession() {
+    if (!sessionId || !identityReady || voiceConnected) return;
+    setVoiceError("");
+    setVoiceStatus("connecting");
+
+    try {
+      const { data } = await axios.post(`${apiBaseUrl}/api/realtime/session`, {
+        sessionId,
+        pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
+        pageTitle: typeof document !== "undefined" ? document.title : undefined,
+        visitorName: identityName,
+      });
+      const ephemeralKey = data?.client_secret?.value ?? data?.value ?? data?.client_secret;
+      if (!ephemeralKey || typeof ephemeralKey !== "string") {
+        throw new Error("Realtime session did not return a usable client secret.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      const peerConnection = new RTCPeerConnection();
+      const remoteAudio = new Audio();
+      remoteAudio.autoplay = true;
+
+      peerConnection.ontrack = (event) => {
+        remoteAudio.srcObject = event.streams[0];
+      };
+      stream.getTracks().forEach((track) => peerConnection.addTrack(track, stream));
+
+      const dataChannel = peerConnection.createDataChannel("oai-events");
+      dataChannel.addEventListener("open", () => {
+        setVoiceConnected(true);
+        setVoiceStatus("listening");
+        sendRealtimeEvent({
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: "The visitor started a OnePWS voice session. Give a brief premium welcome, say you can guide them on solution planning as well as specific OnePWS context, and ask what they are planning today.",
+              },
+            ],
+          },
+        });
+        sendRealtimeEvent({ type: "response.create" });
+      });
+      dataChannel.addEventListener("message", (messageEvent) => {
+        try {
+          void handleRealtimeEvent(JSON.parse(messageEvent.data));
+        } catch {
+          setVoiceError("Could not read a realtime voice event.");
+        }
+      });
+      dataChannel.addEventListener("close", () => {
+        setVoiceConnected(false);
+        setVoiceStatus("idle");
+      });
+
+      peerConnectionRef.current = peerConnection;
+      realtimeChannelRef.current = dataChannel;
+      realtimeStreamRef.current = stream;
+      remoteAudioRef.current = remoteAudio;
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
+        method: "POST",
+        body: offer.sdp,
+        headers: {
+          Authorization: `Bearer ${ephemeralKey}`,
+          "Content-Type": "application/sdp",
+        },
+      });
+      if (!sdpResponse.ok) {
+        throw new Error(await sdpResponse.text());
+      }
+
+      await peerConnection.setRemoteDescription({
+        type: "answer",
+        sdp: await sdpResponse.text(),
+      });
+    } catch (error) {
+      cleanupVoiceSession();
+      setVoiceError(error instanceof Error ? error.message : "Voice connection failed.");
+      setVoiceStatus("error");
+    }
+  }
 
   async function sendMessage(content: string) {
     if (!sessionId || !identityReady || (!content.trim() && attachments.length === 0)) return;
@@ -333,7 +623,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
                       <span className="text-white">OnePWS </span>
                       <span className="text-[#EA2D2D]">Assistant</span>
                     </h2>
-                    <p className="mt-1 text-[11px] leading-[1.2] text-white/88 sm:text-[12px]">We&apos;re here to help!</p>
+                    <p className="mt-1 text-[11px] leading-[1.2] text-white/88 sm:text-[12px]">Smart guidance for your next workspace project.</p>
                     <div className="mt-1.5 flex items-center gap-2 text-[11px] leading-[1.2] text-white/86 sm:text-[12px]">
                       <span className="h-2 w-2 rounded-full bg-[#21c45d] sm:h-2.5 sm:w-2.5" />
                       Online
@@ -353,7 +643,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
             <div className="shrink-0 bg-[linear-gradient(135deg,#ea2d2d_0%,#cf1a28_100%)] px-4 py-3 text-white sm:px-5 sm:py-5">
               <div className="flex items-center gap-4">
                 <p className="text-[11px] font-medium leading-[1.4] sm:text-[14px]">
-                  Control rooms, flooring, interiors, healthcare infra, and modular OT enquiries.
+                  Control rooms, flooring, interiors, healthcare infra, and modular OT planning.
                 </p>
               </div>
             </div>
@@ -362,7 +652,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
                 <div className="w-full rounded-[16px] border border-black/8 bg-[#faf8f6] p-4 shadow-[0_10px_24px_rgba(23,19,15,0.05)] sm:rounded-[18px] sm:p-5">
                   <div className="text-[14px] font-semibold leading-[1.2] text-black/88 sm:text-[15px]">Start your conversation</div>
                   <p className="mt-2 text-[11px] leading-[1.45] text-black/62 sm:text-[12px]">
-                    Enter your name and work email first. Existing users will resume their previous chat. New users will start a fresh conversation.
+                    Add your name and work email once so your chat and voice conversation can continue smoothly.
                   </p>
                   <div className="mt-4 space-y-3">
                     <Input
@@ -395,7 +685,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
             <div ref={scrollRef} className="onepws-chat-scroll min-h-0 flex-1 space-y-3 overflow-y-auto bg-white px-4 py-4 scroll-smooth sm:space-y-5 sm:px-5 sm:py-5">
               {messages.length === 0 ? (
                 <div className="space-y-3">
-                  <p className="text-[11px] leading-[1.45] text-black/68 sm:text-[12px]">Start with your project need. The assistant will guide the conversation and help you quickly.</p>
+                  <p className="text-[11px] leading-[1.45] text-black/68 sm:text-[12px]">Technical guidance, project fit, and next steps stay practical from the first message.</p>
                   <div className="flex flex-wrap gap-2">
                     {quickReplies.map((reply) => (
                       <button
@@ -533,11 +823,31 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
                 <button
                   type="button"
                   disabled={!identityReady}
+                  data-testid="onepws-attach-button"
                   className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/8 bg-white text-black shadow-[0_10px_22px_rgba(23,19,15,0.08)] transition hover:bg-[#fafafa] sm:h-12 sm:w-12"
                   aria-label="Attach image or document"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Paperclip className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2.2} />
+                </button>
+                <button
+                  type="button"
+                  disabled={!identityReady || voiceStatus === "connecting"}
+                  data-testid="onepws-voice-button"
+                  className={
+                    voiceConnected
+                      ? "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ea2d2d] text-white shadow-[0_14px_28px_rgba(234,45,45,0.26)] transition hover:bg-[#d82727] disabled:cursor-not-allowed disabled:opacity-45 sm:h-12 sm:w-12"
+                      : voiceStatus === "error"
+                        ? "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-red-200 bg-red-50 text-[#b80d37] shadow-[0_10px_22px_rgba(23,19,15,0.08)] transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-45 sm:h-12 sm:w-12"
+                        : "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/8 bg-white text-black shadow-[0_10px_22px_rgba(23,19,15,0.08)] transition hover:bg-[#fafafa] disabled:cursor-not-allowed disabled:opacity-45 sm:h-12 sm:w-12"
+                  }
+                  aria-label={voiceConnected ? "End voice session" : "Start voice session"}
+                  title={voiceError || liveTranscript || voiceStatusText(voiceStatus)}
+                  onClick={() => (voiceConnected ? stopVoiceSession() : void startVoiceSession())}
+                >
+                  <Mic className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2.2} />
+                  {voiceConnected ? <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-[#21c45d]" /> : null}
+                  {voiceStatus === "connecting" ? <span className="absolute inset-0 rounded-full ring-2 ring-[#ea2d2d]/30 [animation:onepws-pulse_900ms_ease-out_infinite]" /> : null}
                 </button>
                 <Input
                   value={input}

@@ -50,3 +50,24 @@ a {
   background: linear-gradient(180deg, #f35656 0%, #cb1c46 100%);
   background-clip: padding-box;
 }
+
+@keyframes onepws-wave {
+  0%,
+  100% {
+    transform: scaleY(0.55);
+  }
+  50% {
+    transform: scaleY(1.35);
+  }
+}
+
+@keyframes onepws-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}

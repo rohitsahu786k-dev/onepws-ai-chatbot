@@ -41,6 +41,7 @@ import {
   upsertLeadFromPipeline,
   verifyAccessToken,
   verifyPassword,
+  retrieveKnowledgeSnippets,
 } from "@onepws/core";
 import { chatIdentitySchema, chatMessageSchema, departmentSchema, fallbackLeadFormSchema, loginSchema, personMappingSchema, routingRuleSchema, widgetInitSchema } from "@onepws/types";
 
@@ -140,6 +141,93 @@ function extractIdentityFromMessage(content: string) {
     phone: content.match(/(?:\+91|0)?[6-9]\d{9}/)?.[0],
     fullName: content.match(/(?:i am|my name is|this is)\s+([A-Za-z ]{2,})/i)?.[1]?.trim(),
   };
+}
+
+function buildVoiceInstructions(input: {
+  pageUrl?: string;
+  pageTitle?: string;
+  visitorName?: string;
+  knowledgeContext?: string;
+}) {
+  return [
+    "You are OnePWS AI Assistant, an AI Technical Sales and Support Consultant for control room solutions.",
+    "You are not a casual chatbot or generic assistant.",
+    "Speak in a professional, concise, consultative, enterprise-grade tone that feels warm and intelligent.",
+    "Support English, Hindi, and Hinglish. Reply in the user's language.",
+    "Help with control room consoles, video walls, raised access flooring, command centers, ergonomic workstations, auditoriums, modular operation theatres, and corporate interiors.",
+    "Use the get_onepws_knowledge function before answering specific OnePWS product, specification, catalogue, certification, client, case-study, or technical fact questions.",
+    "Do not limit answers to the knowledge base for general planning, comparison, troubleshooting, or design guidance.",
+    "If the knowledge tool does not return a OnePWS-specific fact, say that briefly, then still give useful general guidance and offer to connect the sales team.",
+    "Never invent exact OnePWS prices, dimensions, certifications, delivery timelines, client names, guarantees, or stock availability.",
+    "For quotes, pricing, delivery timelines, warranty, HAZLOC, blast-resistant, or project-specific engineering decisions, collect details and recommend human follow-up.",
+    "Use a smart rhythm: direct answer, practical recommendation, then one easy next step when the user shows project intent.",
+    "Capture leads naturally. Ask one short follow-up question at a time for name, company, email, phone, industry, requirement, timeline, budget, operator count, and project location.",
+    "When enough contact and requirement details are available, call capture_onepws_lead.",
+    "If the user asks for a human, pricing, enterprise procurement, or sounds frustrated, call request_human_handoff.",
+    "Correctly pronounce product names such as XLAT-XE, Dynamic-XE, ATC console, video wall, ergonomic console, and raised access flooring.",
+    "For Hinglish, use natural Roman Hinglish and avoid stiff translations.",
+    "Keep voice answers under 45 seconds unless the user asks for detail.",
+    input.visitorName ? `Known visitor name: ${input.visitorName}.` : "",
+    input.pageTitle || input.pageUrl ? `Current page context: ${[input.pageTitle, input.pageUrl].filter(Boolean).join(" | ")}` : "",
+    input.knowledgeContext ? `Relevant OnePWS knowledge context:\n${input.knowledgeContext}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function realtimeTools() {
+  return [
+    {
+      type: "function",
+      name: "get_onepws_knowledge",
+      description: "Retrieve current OnePWS knowledge-base snippets for technical, product, catalogue, certification, client, case-study, or company questions.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The precise user question or product/industry topic to search in the OnePWS knowledge base.",
+          },
+        },
+        required: ["query"],
+      },
+    },
+    {
+      type: "function",
+      name: "capture_onepws_lead",
+      description: "Capture a qualified OnePWS sales or support lead after the user has shared contact and project requirement details.",
+      parameters: {
+        type: "object",
+        properties: {
+          fullName: { type: "string" },
+          email: { type: "string" },
+          phone: { type: "string" },
+          company: { type: "string" },
+          industry: { type: "string" },
+          requirementSummary: { type: "string" },
+          projectLocation: { type: "string" },
+          timeline: { type: "string" },
+          budget: { type: "string" },
+          operatorCount: { type: "string" },
+          preferredContactTime: { type: "string" },
+        },
+        required: ["requirementSummary"],
+      },
+    },
+    {
+      type: "function",
+      name: "request_human_handoff",
+      description: "Request human sales or support follow-up for pricing, enterprise procurement, low confidence, frustration, or explicit human-agent requests.",
+      parameters: {
+        type: "object",
+        properties: {
+          reason: { type: "string" },
+          preferredChannel: { type: "string", enum: ["phone", "email", "whatsapp", "any"] },
+        },
+        required: ["reason"],
+      },
+    },
+  ];
 }
 
 async function recordAudit(request: AuthenticatedRequest, input: { action: string; entityType: string; entityId?: string; before?: unknown; after?: unknown }) {
@@ -264,6 +352,87 @@ app.post("/api/chat/message", async (request, response, next) => {
     response.json({ reply: pipeline.assistantReply, extraction: pipeline.extraction, lead, sessionId: activeSessionId, resumedExistingSession: activeSessionId !== payload.sessionId });
   } catch (error) {
     io.to(request.body.sessionId).emit("assistant:typing", { active: false });
+    next(error);
+  }
+});
+
+app.post("/api/realtime/session", async (request, response, next) => {
+  try {
+    if (!env.OPENAI_API_KEY) {
+      return response.status(503).json({ message: "OpenAI Realtime is not configured." });
+    }
+
+    const pageUrl = typeof request.body?.pageUrl === "string" ? request.body.pageUrl.slice(0, 500) : undefined;
+    const pageTitle = typeof request.body?.pageTitle === "string" ? request.body.pageTitle.slice(0, 180) : undefined;
+    const visitorName = typeof request.body?.visitorName === "string" ? request.body.visitorName.slice(0, 80) : undefined;
+    const seedQuery = [pageTitle, pageUrl].filter(Boolean).join(" ");
+    const snippets = seedQuery ? await retrieveKnowledgeSnippets(seedQuery, 3) : [];
+    const knowledgeContext = snippets.map((snippet, index) => `[${index + 1}] ${snippet.title}\n${snippet.content}`).join("\n\n").slice(0, 6000);
+
+    const realtimeResponse = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session: {
+          type: "realtime",
+          model: env.OPENAI_REALTIME_MODEL,
+          instructions: buildVoiceInstructions({ pageUrl, pageTitle, visitorName, knowledgeContext }),
+          audio: {
+            input: {
+              transcription: {
+                model: env.OPENAI_REALTIME_TRANSCRIPTION_MODEL,
+              },
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 650,
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+            output: {
+              voice: env.OPENAI_REALTIME_VOICE,
+            },
+          },
+          tools: realtimeTools(),
+          tool_choice: "auto",
+        },
+      }),
+    });
+
+    const data = await realtimeResponse.json().catch(() => null);
+    if (!realtimeResponse.ok) {
+      return response.status(realtimeResponse.status).json({
+        message: "Could not create OpenAI Realtime session.",
+        error: data?.error?.message ?? data?.message,
+      });
+    }
+
+    response.json({
+      ...data,
+      model: env.OPENAI_REALTIME_MODEL,
+      voice: env.OPENAI_REALTIME_VOICE,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/realtime/knowledge", async (request, response, next) => {
+  try {
+    const query = String(request.body?.query ?? "").trim().slice(0, 500);
+    if (!query) return response.status(400).json({ message: "Query is required." });
+
+    const snippets = await retrieveKnowledgeSnippets(query, 3);
+    response.json({
+      snippets,
+      context: snippets.map((snippet, index) => `[${index + 1}] ${snippet.title}\nSource: ${snippet.sourceUrl}\n${snippet.content}`).join("\n\n"),
+    });
+  } catch (error) {
     next(error);
   }
 });

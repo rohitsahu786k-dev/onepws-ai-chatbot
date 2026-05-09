@@ -223,11 +223,14 @@ async function buildKnowledgeReply(input: {
           {
             type: "input_text",
             text: [
-              "You are the official OnePWS company AI assistant.",
-              "Your first job is to answer the visitor's latest question clearly, like a helpful company expert.",
-              "Use the supplied OnePWS website knowledge snippets when they are relevant.",
+              "You are the official OnePWS AI Assistant.",
+              "Act like an AI Technical Sales and Support Consultant for control room solutions, not a casual chatbot or generic assistant.",
+              "Your first job is to answer the visitor's latest question clearly, like a helpful OnePWS technical consultant.",
+              "Use the supplied OnePWS website knowledge snippets when they are relevant, but do not limit yourself to them for general technical guidance.",
               "If attachments are provided, analyze them before answering.",
-              "If the snippets do not contain a specific fact, do not invent exact prices, certifications, dimensions, delivery timelines, or guarantees.",
+              "Use general industry knowledge for planning, comparison, troubleshooting, and design guidance when the knowledge snippets do not cover the topic.",
+              "For OnePWS-specific facts, do not invent exact prices, certifications, dimensions, delivery timelines, client names, guarantees, or stock availability.",
+              "If a OnePWS-specific fact is unavailable, say so briefly, then still give useful general guidance and offer to connect the right OnePWS team.",
               "Do not keep saying the enquiry is captured or ready for the team.",
               "Do not force a lead form. Capture lead details silently from conversation.",
               "Ask at most one short follow-up question only when the visitor shows project/buying intent.",
@@ -236,10 +239,14 @@ async function buildKnowledgeReply(input: {
               "Default to 2 short sentences, or 3 only when needed.",
               "Stay under 70 words unless the user explicitly asks for detail.",
               "Lead with the value or outcome, not background explanation.",
+              "Use a smart rhythm: direct answer, practical recommendation, then one useful next step when appropriate.",
+              "Recommend solution direction from general control-room, workspace, flooring, interiors, or healthcare infrastructure expertise; reserve exact OnePWS model claims for knowledge-supported facts.",
               "When asking for details, ask one concrete thing and make it easy to answer with choices such as timeline, location, project type, or callback preference.",
               "Avoid interview-style back-and-forth. Prefer guided, form-like next steps in wording.",
               "Use bullets only when the user asks for features, comparisons, or steps.",
-              "Sound premium, consultative, and confident.",
+              "Sound premium, consultative, confident, and warm without becoming chatty.",
+              "For Hinglish, use natural Roman Hinglish that feels helpful and professional.",
+              "Avoid emojis, slang, overfriendly tone, and robotic boilerplate.",
               "Avoid long paragraphs and avoid repeating the user's wording.",
               `Reply language: ${input.language}.`,
             ].join("\n"),
@@ -259,7 +266,7 @@ async function buildKnowledgeReply(input: {
               leadContext.length ? `Known visitor/project details:\n${leadContext.join("\n")}` : "Known visitor/project details: none yet.",
               snippets.length
                 ? ["OnePWS website knowledge snippets:", ...snippets.map((snippet, index) => `[${index + 1}] ${snippet.title} (${snippet.sourceUrl})\n${snippet.content}`)].join("\n\n")
-                : "No exact website snippet matched. Answer from the general OnePWS solution areas only and be transparent if details are not available.",
+                : "No exact website snippet matched. Give a smart answer using general industry knowledge and OnePWS solution-area context. Be transparent only for OnePWS-specific facts that are not available.",
               input.attachments.length
                 ? [
                     "Attachment context:",
@@ -354,33 +361,63 @@ function nextConversationalQuestion(field: string | undefined, language: string)
   return sameLanguageReply(language, english[field] ?? fallback, hinglish[field] ?? fallback, hinglish[field] ?? fallback);
 }
 
-function solutionGuidance(category: SolutionCategory) {
-  const replies: Partial<Record<SolutionCategory, string>> = {
+function solutionGuidance(category: SolutionCategory, language: string) {
+  const english: Partial<Record<SolutionCategory, string>> = {
     control_room:
-      "For control room projects, OnePWS can support command center layouts, operator workflow, monitoring walls, ergonomics, and project coordination.",
+      "For a control room, the smart starting point is operator workflow, video-wall visibility, 24/7 ergonomics, cable routing, and future expansion.",
     control_room_consoles:
-      "For control room consoles, OnePWS can discuss operator desks, console layouts, cable management, equipment placement, and ergonomic control room furniture.",
+      "For control room consoles, focus on operator count, monitor layout, cable access, equipment heat, and long-shift comfort before finalizing furniture.",
     auditorium:
-      "For auditorium or conference spaces, OnePWS can help with interior planning, seating-focused layouts, finishes, and project execution requirements.",
+      "For auditorium or conference spaces, the right plan balances seating sightlines, acoustics, finishes, lighting, and execution sequencing.",
     corporate_interiors:
-      "For corporate interiors, OnePWS can support workspace planning, interior execution, furniture coordination, and integrated workplace requirements.",
+      "For corporate interiors, OnePWS can shape the workspace around team flow, furniture coordination, finishes, and site execution priorities.",
     integrated_workspace:
-      "For integrated workspaces, OnePWS can connect interiors, consoles, flooring, and infrastructure planning into a single project conversation.",
+      "For integrated workspaces, the best approach is to align interiors, consoles, flooring, services, and infrastructure in one coordinated scope.",
     raised_access_flooring:
-      "For raised access flooring, OnePWS can discuss access-floor systems for service routing, load needs, finish options, and site execution planning.",
+      "For raised access flooring, check service routing, load requirements, finished floor height, panel finish, and maintenance access early.",
     false_flooring:
-      "For false flooring, OnePWS can guide you on flooring requirements, project area, service access needs, and execution timelines.",
+      "For false flooring, the key decisions are service access, load rating, height, finish, room usage, and installation timeline.",
     modular_operation_theatre:
-      "For modular OT projects, OnePWS can support operation theatre infrastructure, clean-room-related needs, finishes, and project coordination.",
+      "For modular OT projects, planning should cover clean workflow, wall and ceiling finishes, service panels, HVAC coordination, and execution hygiene.",
     healthcare_infrastructure:
-      "For healthcare infrastructure, OnePWS can help with hospital interiors, modular OT-related spaces, clean-room-linked needs, and execution planning.",
+      "For healthcare infrastructure, the scope usually needs clean finishes, workflow planning, MEP coordination, and reliable execution control.",
     clean_room_related:
-      "For clean-room-related requirements, OnePWS can discuss controlled-space infrastructure needs, healthcare use cases, finishes, and project scope.",
+      "For clean-room requirements, define classification target, pressure needs, material finishes, HVAC coordination, and validation expectations first.",
     mixed_requirement:
-      "Your requirement touches multiple OnePWS solution areas, so the best next step is to capture the project scope and route it to the right internal team.",
+      "This touches multiple OnePWS solution areas, so the best move is to map the scope once and route each part to the right specialist.",
   };
 
-  return replies[category] ?? "OnePWS can help with control rooms, consoles, auditoriums, interiors, flooring, healthcare infrastructure, and modular OT projects.";
+  const hinglish: Partial<Record<SolutionCategory, string>> = {
+    control_room:
+      "Control room ke liye smart starting point operator workflow, video-wall visibility, 24/7 ergonomics, cable routing, aur future expansion hota hai.",
+    control_room_consoles:
+      "Control room consoles me pehle operator count, monitor layout, cable access, equipment heat, aur long-shift comfort clear karna best hota hai.",
+    auditorium:
+      "Auditorium ya conference space me seating sightlines, acoustics, finishes, lighting, aur execution sequencing ko balance karna zaruri hota hai.",
+    corporate_interiors:
+      "Corporate interiors me OnePWS workspace ko team flow, furniture coordination, finishes, aur site execution ke around plan kar sakta hai.",
+    integrated_workspace:
+      "Integrated workspace me interiors, consoles, flooring, services, aur infrastructure ko ek coordinated scope me align karna best hota hai.",
+    raised_access_flooring:
+      "Raised access flooring me service routing, load requirement, finished floor height, panel finish, aur maintenance access pehle check karna chahiye.",
+    false_flooring:
+      "False flooring me key decisions service access, load rating, height, finish, room usage, aur installation timeline hote hain.",
+    modular_operation_theatre:
+      "Modular OT me clean workflow, wall-ceiling finishes, service panels, HVAC coordination, aur execution hygiene ko saath plan karna hota hai.",
+    healthcare_infrastructure:
+      "Healthcare infrastructure me clean finishes, workflow planning, MEP coordination, aur reliable execution control sabse important hote hain.",
+    clean_room_related:
+      "Clean-room requirement me classification target, pressure needs, material finishes, HVAC coordination, aur validation expectations pehle define karna best hai.",
+    mixed_requirement:
+      "Ye requirement multiple OnePWS areas touch kar rahi hai, isliye scope ko ek baar map karke right specialist tak route karna best rahega.",
+  };
+
+  const defaultEnglish =
+    "OnePWS can help with control rooms, consoles, auditoriums, interiors, flooring, healthcare infrastructure, and modular OT projects.";
+  const defaultHinglish =
+    "OnePWS control rooms, consoles, auditoriums, interiors, flooring, healthcare infrastructure, aur modular OT projects me help kar sakta hai.";
+
+  return sameLanguageReply(language, english[category] ?? defaultEnglish, hinglish[category] ?? defaultHinglish, hinglish[category] ?? defaultHinglish);
 }
 
 function buildHeuristicReply(input: {
@@ -404,12 +441,23 @@ function buildHeuristicReply(input: {
   const normalized = input.content.toLowerCase().trim();
   const isGreeting = /^(hi|hello|hey|namaste|hii)\b/.test(normalized);
   const intro = isGreeting
-    ? "Hello. I can help you with OnePWS project enquiries."
+    ? sameLanguageReply(
+        input.language,
+        "Hello. Tell me what you are planning, and I will guide you with the right OnePWS solution direction.",
+        "Hello. Aap jo plan kar rahe hain bataiye, main aapko right OnePWS solution direction suggest kar dunga.",
+        "Hello. Aap jo plan kar rahe hain bataiye, main right OnePWS solution direction suggest kar dunga."
+      )
     : input.intent === "support_request"
-      ? "I can help capture your support requirement and route it to the OnePWS team."
-      : solutionGuidance(category);
+      ? sameLanguageReply(
+          input.language,
+          "I can help narrow down the issue and route it to the right OnePWS support team.",
+          "Main issue ko narrow down karke right OnePWS support team tak route karne me help kar sakta hun.",
+          "Main issue ko narrow down karke right OnePWS support team tak route karne me help kar sakta hun."
+        )
+      : solutionGuidance(category, input.language);
   const categoryLine = category !== "unknown" && category !== "mixed_requirement" ? ` I have noted this under ${formatCategory(category)}.` : "";
-  const nextQuestion = ` ${nextConversationalQuestion(input.missingFields[0], input.language)}`;
+  const nextQuestion =
+    hasBuyingIntent(input.content, input.intent) && input.missingFields.length > 0 ? ` ${nextConversationalQuestion(input.missingFields[0], input.language)}` : "";
 
   return sameLanguageReply(input.language, `${intro}${categoryLine}${nextQuestion}`, `${intro}${categoryLine}${nextQuestion}`, `${intro}${categoryLine}${nextQuestion}`);
 }

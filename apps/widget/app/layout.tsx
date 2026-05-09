@@ -15,7 +15,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={beVietnamPro.className}>{children}</body>
+      <body className={beVietnamPro.className} suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

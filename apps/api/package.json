@@ -8,6 +8,7 @@
     "start": "tsx src/server.ts",
     "build": "tsc -p tsconfig.json",
     "seed": "tsx src/seed.ts",
+    "import:kb": "tsx src/import-knowledge-base.ts",
     "import:website": "tsx src/import-website.ts"
   },
   "dependencies": {

@@ -21,6 +21,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "seed": "npm run seed -w @onepws/api",
     "import:kb": "npm run import:kb -w @onepws/api --",
+    "generate:kb-md": "npm run generate:kb-md -w @onepws/api --",
     "format": "npm run format --workspaces --if-present"
   },
   "keywords": [

@@ -272,6 +272,94 @@ function parseCmkbMarkdown(markdown: string, sourceFile: string) {
   return entries;
 }
 
+/** Company & management KB in updated format:
+ * - Sections like: `### OCMKB00001 - Founder CEO MD CBO`
+ * - Fields: `**Q:**`, `**A:**`, `**Brand:**`, `**Source:**`
+ */
+function parseOcmkbMarkdown(markdown: string, sourceFile: string) {
+  const entries: KnowledgeEntry[] = [];
+  const lines = normalizeMarkdownText(markdown).split("\n");
+
+  let current: KnowledgeEntry | null = null;
+  let answerLines: string[] = [];
+  let inAnswer = false;
+
+  const pushCurrent = () => {
+    if (!current) return;
+    const answer = normalizeMarkdownText(answerLines.join("\n"));
+    const q = stripMarkdownInline(current.question);
+    if (q && answer) {
+      entries.push({
+        ...current,
+        question: q,
+        answer,
+        // `brand` helps downstream knowledge-key heuristics; keep it only if present.
+        brand: current.brand ?? undefined,
+        sourceFile,
+      });
+    }
+    current = null;
+    answerLines = [];
+    inAnswer = false;
+  };
+
+  for (const line of lines) {
+    const ocmkbHeader = line.match(/^###\s+(OCMKB\d+)\s*-\s*(.+?)\s*$/i);
+    if (ocmkbHeader) {
+      pushCurrent();
+      current = {
+        id: ocmkbHeader[1].toUpperCase(),
+        category: "Company & Management",
+        question: "",
+        answer: "",
+        sourceFile,
+      };
+      continue;
+    }
+
+    if (!current) continue;
+
+    const qMatch = line.match(/^\*\*Q:\*\*\s*(.+?)\s*$/i);
+    if (qMatch) {
+      current.question = stripMarkdownInline(qMatch[1]);
+      continue;
+    }
+
+    const aMatch = line.match(/^\*\*A:\*\*\s*(.*)$/i);
+    if (aMatch) {
+      inAnswer = true;
+      answerLines = [aMatch[1]];
+      continue;
+    }
+
+    const brandMatch = line.match(/^\*\*Brand:\*\*\s*(.+?)\s*$/i);
+    if (brandMatch) {
+      inAnswer = false;
+      current.brand = stripMarkdownInline(brandMatch[1]);
+      continue;
+    }
+
+    const sourceMatch = line.match(/^\*\*Source:\*\*\s*(.+?)\s*$/i);
+    if (sourceMatch) {
+      inAnswer = false;
+      current.source = stripMarkdownInline(sourceMatch[1]);
+      current.sourceUrl = extractSourceUrl(current.source);
+      pushCurrent();
+      continue;
+    }
+
+    if (/^\*\*(Confidence|Instruction):\*\*/i.test(line.trim())) {
+      inAnswer = false;
+      continue;
+    }
+
+    if (inAnswer) answerLines.push(line);
+  }
+
+  pushCurrent();
+  return entries;
+}
+
 function parseKbMarkdown(markdown: string, sourceFile: string) {
   const entries: KnowledgeEntry[] = [];
   const lines = normalizeMarkdownText(markdown).split("\n");
@@ -352,6 +440,7 @@ function parseMarkdownKnowledgeBase(markdown: string, sourceFile: string) {
   return [
     ...parseKbMarkdown(markdown, sourceFile),
     ...parseCmkbMarkdown(markdown, sourceFile),
+    ...parseOcmkbMarkdown(markdown, sourceFile),
     ...parseSimpleQaMarkdown(markdown, sourceFile),
   ];
 }

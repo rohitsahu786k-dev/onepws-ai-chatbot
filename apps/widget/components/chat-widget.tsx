@@ -382,12 +382,20 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
         throw new Error("Realtime session did not return a usable client secret.");
       }
 
+      const baseAudioConstraints: MediaTrackConstraints = {
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        autoGainControl: { ideal: true },
+        channelCount: { ideal: 1 },
+      };
+      const supported = typeof navigator !== "undefined" ? navigator.mediaDevices?.getSupportedConstraints?.() : undefined;
+      const voiceIsolationPreferred = Boolean(supported && "voiceIsolation" in supported && supported.voiceIsolation);
+      const micConstraints = {
+        ...baseAudioConstraints,
+        ...(voiceIsolationPreferred ? { voiceIsolation: { ideal: true } } : {}),
+      } as MediaTrackConstraints;
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: micConstraints,
       });
       const peerConnection = new RTCPeerConnection();
       const remoteAudio = new Audio();
@@ -410,7 +418,7 @@ export function ChatWidget({ embedded }: { embedded: boolean }) {
             content: [
               {
                 type: "input_text",
-                text: "The visitor started a OnePWS voice session. Give a brief premium welcome, say you can guide them on solution planning as well as specific OnePWS context, and ask what they are planning today.",
+                text: 'Visitor started voice chat. Speak one brief welcome (~6 seconds max): Introduce yourself as OnePWS voice assistant and ask ONE clear question—what workspace or infrastructure they are exploring. Nothing else.',
               },
             ],
           },

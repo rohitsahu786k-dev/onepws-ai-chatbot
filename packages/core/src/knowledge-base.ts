@@ -12,7 +12,7 @@ type ImportOptions = {
   overlap?: number;
 };
 
-type KnowledgeSnippet = {
+export type KnowledgeSnippet = {
   title: string;
   sourceUrl: string;
   content: string;
@@ -81,6 +81,10 @@ function questionKeysForEntry(entry: KnowledgeEntry) {
   if (/workspace metal solutions|wmspl/i.test(text)) {
     keys.add(normalizeQuestionKey(entry.question.replace(/workspace metal solutions pvt\.?\s*ltd\.?/gi, "WMSPL").replace(/\(WMSPL\)/gi, "")));
     if (/^what is workspace metal solutions pvt\.?\s*ltd\.?/i.test(entry.question)) keys.add(normalizeQuestionKey("What is WMSPL?"));
+  }
+
+  if (/\bwmspl\b/i.test(entry.brand ?? "") && /^what is\b/i.test(entry.question)) {
+    keys.add(normalizeQuestionKey(entry.question.replace(/^what is\b/i, "What is Workspace Metal Solutions Pvt. Ltd.")));
   }
 
   return Array.from(keys).filter(Boolean);
@@ -181,6 +185,93 @@ function parseSimpleQaMarkdown(markdown: string, sourceFile: string) {
   return entries;
 }
 
+/** Company & management KB: `## CMKB0001 — OnePWS — Topic` with **Q:** / **A:** / **Source:** */
+function parseCmkbMarkdown(markdown: string, sourceFile: string) {
+  const entries: KnowledgeEntry[] = [];
+  const lines = normalizeMarkdownText(markdown).split("\n");
+  let pendingId = "";
+  let pendingBrandHeading = "";
+  let current: KnowledgeEntry | null = null;
+  let answerLines: string[] = [];
+  let inAnswer = false;
+
+  const pushCurrent = () => {
+    if (!current) return;
+    const answer = normalizeMarkdownText(answerLines.join("\n"));
+    const q = stripMarkdownInline(current.question);
+    if (q && answer) {
+      entries.push({
+        ...current,
+        question: q,
+        answer,
+        brand: pendingBrandHeading || current.brand,
+        id: current.id ?? pendingId,
+      });
+    }
+    current = null;
+    answerLines = [];
+    inAnswer = false;
+  };
+
+  for (const line of lines) {
+    const cmkbHeader = line.match(/^##\s+(CMKB\d+)\s+—\s+(.+?)\s+—\s+(.+?)\s*$/i);
+    if (cmkbHeader) {
+      pushCurrent();
+      pendingId = cmkbHeader[1].toUpperCase();
+      pendingBrandHeading = stripMarkdownInline(cmkbHeader[2]);
+      current = {
+        id: pendingId,
+        brand: pendingBrandHeading,
+        category: "",
+        question: "",
+        answer: "",
+        sourceFile,
+      };
+      continue;
+    }
+
+    if (!current) continue;
+
+    const categoryMatch = line.match(/^\*\*Category:\*\*\s*(.+?)\s*$/i);
+    if (categoryMatch) {
+      current.category = stripMarkdownInline(categoryMatch[1]);
+      continue;
+    }
+
+    const qMatch = line.match(/^\*\*Q:\*\*\s*(.+?)\s*$/i);
+    if (qMatch) {
+      current.question = stripMarkdownInline(qMatch[1]);
+      continue;
+    }
+
+    const aMatch = line.match(/^\*\*A:\*\*\s*(.*)$/i);
+    if (aMatch) {
+      inAnswer = true;
+      answerLines.push(aMatch[1]);
+      continue;
+    }
+
+    const sourceMatch = line.match(/^\*\*Source:\*\*\s*(.+?)\s*$/i);
+    if (sourceMatch) {
+      inAnswer = false;
+      current.source = stripMarkdownInline(sourceMatch[1]);
+      current.sourceUrl = extractSourceUrl(current.source);
+      pushCurrent();
+      continue;
+    }
+
+    if (/^\*\*(Confidence|Chatbot instruction):\*\*/i.test(line.trim())) {
+      inAnswer = false;
+      continue;
+    }
+
+    if (inAnswer) answerLines.push(line);
+  }
+
+  pushCurrent();
+  return entries;
+}
+
 function parseKbMarkdown(markdown: string, sourceFile: string) {
   const entries: KnowledgeEntry[] = [];
   const lines = normalizeMarkdownText(markdown).split("\n");
@@ -258,7 +349,27 @@ function parseKbMarkdown(markdown: string, sourceFile: string) {
 }
 
 function parseMarkdownKnowledgeBase(markdown: string, sourceFile: string) {
-  return [...parseKbMarkdown(markdown, sourceFile), ...parseSimpleQaMarkdown(markdown, sourceFile)];
+  return [
+    ...parseKbMarkdown(markdown, sourceFile),
+    ...parseCmkbMarkdown(markdown, sourceFile),
+    ...parseSimpleQaMarkdown(markdown, sourceFile),
+  ];
+}
+
+function clipKnowledgeText(text: string, maxLen: number) {
+  const t = text.trim();
+  if (t.length <= maxLen) return t;
+  const slice = t.slice(0, maxLen);
+  const lastSpace = slice.lastIndexOf(" ");
+  const clipped = (lastSpace > maxLen * 0.55 ? slice.slice(0, lastSpace) : slice).trim();
+  return `${clipped}…`;
+}
+
+function clampSnippets(items: KnowledgeSnippet[], maxCharsPerSnippet: number): KnowledgeSnippet[] {
+  return items.map((item) => ({
+    ...item,
+    content: clipKnowledgeText(item.content, maxCharsPerSnippet),
+  }));
 }
 
 function dedupeEntries(entries: KnowledgeEntry[]) {
@@ -443,7 +554,12 @@ export async function importMarkdownKnowledgeBase(options: MarkdownImportOptions
   };
 }
 
-export async function retrieveKnowledgeSnippets(query: string, limit = 4): Promise<KnowledgeSnippet[]> {
+export async function retrieveKnowledgeSnippets(
+  query: string,
+  limit = 3,
+  options?: { maxCharsPerSnippet?: number }
+): Promise<KnowledgeSnippet[]> {
+  const maxCharsPerSnippet = options?.maxCharsPerSnippet ?? 900;
   const normalizedQuery = query.trim();
   if (!env.ENABLE_RAG || normalizedQuery.length < 3) return [];
 
@@ -458,11 +574,14 @@ export async function retrieveKnowledgeSnippets(query: string, limit = 4): Promi
       .lean();
 
     if (directQuestionResults.length > 0) {
-      return directQuestionResults.map((item) => ({
-        title: item.title,
-        sourceUrl: item.sourceUrl,
-        content: item.content,
-      }));
+      return clampSnippets(
+        directQuestionResults.map((item) => ({
+          title: item.title,
+          sourceUrl: item.sourceUrl,
+          content: item.content,
+        })),
+        maxCharsPerSnippet
+      );
     }
   }
 
@@ -475,11 +594,14 @@ export async function retrieveKnowledgeSnippets(query: string, limit = 4): Promi
     .lean();
 
   if (textResults.length > 0) {
-    return textResults.map((item) => ({
-      title: item.title,
-      sourceUrl: item.sourceUrl,
-      content: item.content,
-    }));
+    return clampSnippets(
+      textResults.map((item) => ({
+        title: item.title,
+        sourceUrl: item.sourceUrl,
+        content: item.content,
+      })),
+      maxCharsPerSnippet
+    );
   }
 
   const terms = normalizedQuery
@@ -496,9 +618,17 @@ export async function retrieveKnowledgeSnippets(query: string, limit = 4): Promi
     .select("title sourceUrl content")
     .lean();
 
-  return fallbackResults.map((item) => ({
-    title: item.title,
-    sourceUrl: item.sourceUrl,
-    content: item.content,
-  }));
+  return clampSnippets(
+    fallbackResults.map((item) => ({
+      title: item.title,
+      sourceUrl: item.sourceUrl,
+      content: item.content,
+    })),
+    maxCharsPerSnippet
+  );
+}
+
+/** Lightweight wrapper for callers that pass pre-fetched snippets (avoids duplicate DB hits). */
+export function trimKnowledgeSnippetsForModel(snippets: KnowledgeSnippet[], maxCharsPerSnippet = 900): KnowledgeSnippet[] {
+  return clampSnippets(snippets, maxCharsPerSnippet);
 }

@@ -10,7 +10,7 @@ import {
   leadTemperatureFromScore,
   sameLanguageReply,
 } from "@onepws/utils";
-import { retrieveKnowledgeSnippets } from "./knowledge-base";
+import { retrieveKnowledgeSnippets, type KnowledgeSnippet } from "./knowledge-base";
 
 const openai = env.OPENAI_API_KEY
   ? new OpenAI({
@@ -195,8 +195,9 @@ async function buildKnowledgeReply(input: {
   shouldSubmitLead: boolean;
   contactOnlyMessage: boolean;
   attachments: PreparedAttachment[];
+  snippets?: KnowledgeSnippet[];
 }) {
-  const snippets = await retrieveKnowledgeSnippets(input.content);
+  const snippets = input.snippets ?? (await retrieveKnowledgeSnippets(input.content, 3));
   if (!openai) {
     return null;
   }
@@ -235,9 +236,8 @@ async function buildKnowledgeReply(input: {
               "Do not force a lead form. Capture lead details silently from conversation.",
               "Ask at most one short follow-up question only when the visitor shows project/buying intent.",
               "For general information questions, answer only; do not ask for name, phone, or email.",
-              "Keep replies crisp, persuasive, and sales-aware.",
-              "Default to 2 short sentences, or 3 only when needed.",
-              "Stay under 70 words unless the user explicitly asks for detail.",
+              "Keep replies ultra-crisp: prefer 1 tight sentence, 2 only if the user needs a clear next step.",
+              "Stay under 45 words unless the user explicitly asks for more detail.",
               "Lead with the value or outcome, not background explanation.",
               "Use a smart rhythm: direct answer, practical recommendation, then one useful next step when appropriate.",
               "Recommend solution direction from general control-room, workspace, flooring, interiors, or healthcare infrastructure expertise; reserve exact OnePWS model claims for knowledge-supported facts.",
@@ -265,8 +265,11 @@ async function buildKnowledgeReply(input: {
               input.contactOnlyMessage ? "The latest visitor message appears to be contact/detail information, not a new product question." : "",
               leadContext.length ? `Known visitor/project details:\n${leadContext.join("\n")}` : "Known visitor/project details: none yet.",
               snippets.length
-                ? ["OnePWS website knowledge snippets:", ...snippets.map((snippet, index) => `[${index + 1}] ${snippet.title} (${snippet.sourceUrl})\n${snippet.content}`)].join("\n\n")
-                : "No exact website snippet matched. Give a smart answer using general industry knowledge and OnePWS solution-area context. Be transparent only for OnePWS-specific facts that are not available.",
+                ? [
+                    "Authoritative knowledge snippets (quote facts only from here; summarise briefly):",
+                    ...snippets.map((snippet, index) => `[${index + 1}] ${snippet.title} (${snippet.sourceUrl})\n${snippet.content}`),
+                  ].join("\n\n")
+                : "No exact website snippet matched. Give a minimal useful answer from general expertise; admit uncertainty only for exact OnePWS-specific facts.",
               input.attachments.length
                 ? [
                     "Attachment context:",
@@ -290,6 +293,7 @@ async function buildKnowledgeReply(input: {
         ],
       },
     ],
+    max_output_tokens: 320,
   });
 
   return response.output_text?.trim() || null;
@@ -479,8 +483,12 @@ export async function runChatPipeline(input: {
         : detectedCategories;
   const heuristicFields = compactFields(extractFieldsFromText(input.content));
   const contextualFields = compactFields(contextualFieldsFromText(input.content, input.existingLead));
-  const aiFields = compactFields(await aiEnhance(input.content, detectedLanguage));
-  const preparedAttachments = await prepareAttachments(input.attachments);
+  const [aiFieldsRaw, preparedAttachments, ragSnippets] = await Promise.all([
+    aiEnhance(input.content, detectedLanguage),
+    prepareAttachments(input.attachments),
+    retrieveKnowledgeSnippets(input.content, 3),
+  ]);
+  const aiFields = compactFields(aiFieldsRaw);
   const fields = {
     ...input.existingLead,
     ...heuristicFields,
@@ -527,6 +535,7 @@ export async function runChatPipeline(input: {
     shouldSubmitLead,
     contactOnlyMessage,
     attachments: preparedAttachments,
+    snippets: ragSnippets,
   });
 
   return {

@@ -89,6 +89,12 @@ npm run import:website -w @onepws/api -- --url=https://onepws.com --maxPages=80
 
 This crawls same-domain HTML pages, chunks the page text, and stores active knowledge-base documents in MongoDB for RAG replies.
 
+Manual Markdown bundles (fine-grained Q&A + company management) can be imported with `ENABLE_RAG=true`. Previous manual Markdown KB entries are cleared during import:
+
+```bash
+npm run import:kb:bundled
+```
+
 ### 6. Run the apps
 
 In separate terminals:
@@ -179,3 +185,4 @@ Every internal routing email includes `MARKETING_CC_EMAIL`.
 - Website-grounded answers use MongoDB knowledge-base chunks when `ENABLE_RAG=true`; refresh them with `npm run import:website -w @onepws/api`.
 - The queue layer falls back to inline processing if Redis is unavailable, which keeps local development usable.
 - The admin UI currently prioritizes coverage of the required operational pages and API integration over final design polish.
+- OpenAI Realtime voice uses stricter turn detection (more silence, higher speech threshold), shorter output limits, smaller knowledge payloads, and optional browser voice isolation when supported; for noisy rooms, wired headsets work best.

@@ -4,6 +4,7 @@ export * from "./auth";
 export * from "./db";
 export * from "./integrations";
 export * from "./knowledge-base";
+export * from "./catalogue-pdf-import";
 export * from "./markdown-kb-generator";
 export * from "./website-crawl";
 export * from "./lead";

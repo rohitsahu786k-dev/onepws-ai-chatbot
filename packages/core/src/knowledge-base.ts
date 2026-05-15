@@ -436,12 +436,41 @@ function parseKbMarkdown(markdown: string, sourceFile: string) {
   return entries;
 }
 
+/** Master training file: `### Q1. Question` / `### Timeline Q1. Question` with **Answer:** blocks */
+function parseMasterQaMarkdown(markdown: string, sourceFile: string) {
+  const entries: KnowledgeEntry[] = [];
+  const appendixIdx = markdown.indexOf("\n## Appendix:");
+  const body = appendixIdx >= 0 ? markdown.slice(0, appendixIdx) : markdown;
+
+  const blockRe =
+    /^### ((?:Q\d+|Timeline Q\d+))\.\s+(.+?)\n\n\*\*Answer:\*\*\s+([\s\S]*?)(?:\n\n\*\*Source family:\*\*\s+(.+?))?(?=\n\n### |\n## |\n# |$)/gm;
+
+  let match: RegExpExecArray | null;
+  while ((match = blockRe.exec(body))) {
+    const answer = normalizeMarkdownText(match[3]);
+    const question = stripMarkdownInline(match[2]);
+    if (!question || !answer) continue;
+
+    entries.push({
+      id: match[1],
+      question,
+      answer,
+      source: match[4] ? stripMarkdownInline(match[4]) : undefined,
+      category: match[1].startsWith("Timeline") ? "Timeline" : "A to Z Q&A",
+      sourceFile,
+    });
+  }
+
+  return entries;
+}
+
 function parseMarkdownKnowledgeBase(markdown: string, sourceFile: string) {
   return [
     ...parseKbMarkdown(markdown, sourceFile),
     ...parseCmkbMarkdown(markdown, sourceFile),
     ...parseOcmkbMarkdown(markdown, sourceFile),
     ...parseSimpleQaMarkdown(markdown, sourceFile),
+    ...parseMasterQaMarkdown(markdown, sourceFile),
   ];
 }
 

@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "seed": "tsx src/seed.ts",
     "import:kb": "tsx src/import-knowledge-base.ts",
+    "import:catalogues": "tsx src/import-catalogue-pdfs.ts",
     "import:website": "tsx src/import-website.ts",
     "generate:kb-md": "tsx src/generate-markdown-knowledge-base.ts"
   },

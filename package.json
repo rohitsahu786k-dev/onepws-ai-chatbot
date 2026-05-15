@@ -21,7 +21,9 @@
     "lint": "npm run lint --workspaces --if-present",
     "seed": "npm run seed -w @onepws/api",
     "import:kb": "npm run import:kb -w @onepws/api --",
-    "import:kb:bundled": "npm run import:kb -w @onepws/api -- --file=../../data/onepws_full_chatbot_knowledge_base.md --file=../../data/onepws_company_management_knowledge_base.md",
+    "import:catalogues": "npm run import:catalogues -w @onepws/api",
+    "import:kb:bundled": "npm run import:kb -w @onepws/api -- --file=../../onepws_master_ai_knowledge_base_updated.md --file=../../data/onepws_company_management_knowledge_base.md",
+    "import:kb:all": "npm run import:catalogues && npm run import:kb:bundled",
     "generate:kb-md": "npm run generate:kb-md -w @onepws/api --",
     "format": "npm run format --workspaces --if-present"
   },
